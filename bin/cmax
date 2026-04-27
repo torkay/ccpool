@@ -1,0 +1,571 @@
+#!/usr/bin/env bash
+# cmax — public entry point for cmaxctl.
+#
+#   cmax                          run claude with full rotation + token (default)
+#   cmax <args>                   transparent wrap of `claude <args>`
+#   cmax setup                    interactive bootstrap (asks for accounts; OAuth)
+#   cmax status [--json]          health dashboard
+#   cmax doctor [--fix] [--json]  diagnose + auto-fix
+#   cmax rotate [<profile>|all]   re-issue + store new long-lived token(s)
+#   cmax recover                  prune backups, clear flags, re-stage schedules
+#   cmax logs [-n N]              tail watcher events
+#   cmax pick [--token]           debug: print next-spawn env (redacted)
+#   cmax usage [--json]           per-account 5h+7d util (ground truth)
+#   cmax statusline [--short]     one-line JSON for prompt integrations
+#   cmax migrate {detect|plan|apply}   v0 (personal substrate) → v1
+#   cmax enable | disable         master kill-switch
+#   cmax version                  print component versions
+#   cmax help                     this help
+
+set -u
+
+# ──────────────────────────────────────────────────────────────────────
+# Resolve cmaxctl python module + caam/claude binaries.
+# ──────────────────────────────────────────────────────────────────────
+CMAX_PY="${CMAX_PY:-python3}"
+# Find the cmaxctl package: same dir as this script's parent (in source/dev),
+# or via `python3 -c "import cmaxctl"` (when installed via pip/pipx/brew).
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(dirname "${SCRIPT_DIR}")"
+
+if [[ -d "${REPO_DIR}/cmaxctl" ]] && "${CMAX_PY}" -c "
+import sys; sys.path.insert(0, '${REPO_DIR}')
+import cmaxctl
+" 2>/dev/null; then
+  export PYTHONPATH="${REPO_DIR}:${PYTHONPATH:-}"
+fi
+
+CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude || echo /usr/local/bin/claude)}"
+CAAM_BIN="${CAAM_BIN:-$(command -v caam || echo "${HOME}/.local/bin/caam")}"
+
+CMAX_DATA="${XDG_DATA_HOME:-${HOME}/.local/share}/cmaxctl"
+CMAX_DISABLED="${CMAX_DATA}/disabled"
+
+# ──────────────────────────────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────────────────────────────
+is_subcommand() {
+  case "${1:-}" in
+    setup|status|doctor|rotate|recover|logs|pick|usage|statusline|migrate|enable|disable|version|help|--help|-h) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+cli() {
+  "${CMAX_PY}" -m cmaxctl.cli "$@"
+}
+
+_g() { if [[ -t 1 ]]; then printf '\033[32m✓\033[0m'; else printf '✓'; fi; }
+_y() { if [[ -t 1 ]]; then printf '\033[33m→\033[0m'; else printf '→'; fi; }
+_r() { if [[ -t 1 ]]; then printf '\033[31m✗\033[0m'; else printf '✗'; fi; }
+_b() { if [[ -t 1 ]]; then printf '\033[1m%s\033[0m' "$1"; else printf '%s' "$1"; fi; }
+
+_read_line() {
+  local __var="$1" __mode="${2:-visible}"
+  local __opts="-r"
+  [[ "${__mode}" == "hidden" ]] && __opts="-rs"
+  if [[ -t 0 ]]; then
+    eval "read ${__opts} ${__var}" || eval "${__var}=''"
+  elif { exec 9<>/dev/tty; } 2>/dev/null; then
+    eval "read ${__opts} ${__var} <&9" || eval "${__var}=''"
+    exec 9<&- 2>/dev/null || true
+  else
+    eval "read ${__opts} ${__var}" 2>/dev/null || eval "${__var}=''"
+  fi
+}
+
+_with_tty_stdin() {
+  if [[ -t 0 && -t 1 && -t 2 ]]; then
+    "$@"; return $?
+  fi
+  if { exec 9<>/dev/tty; } 2>/dev/null; then
+    "$@" <&9
+    local rc=$?
+    exec 9<&- 2>/dev/null || true
+    return ${rc}
+  fi
+  "$@"
+}
+
+_open_url() {
+  if command -v open >/dev/null 2>&1; then
+    open "$1" 2>/dev/null || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$1" 2>/dev/null || true
+  fi
+}
+
+# ──────────────────────────────────────────────────────────────────────
+# Default mode — wrap `claude` with caam smart-routing + token injection.
+# ──────────────────────────────────────────────────────────────────────
+run_claude_default_mode() {
+  if [[ -f "${CMAX_DISABLED}" || "${CLAUDE_ROTATE_DISABLE:-0}" == "1" ]]; then
+    exec "${CLAUDE_BIN}" "$@"
+  fi
+  if ! command -v caam >/dev/null 2>&1; then
+    exec "${CLAUDE_BIN}" "$@"
+  fi
+
+  # Need ≥2 healthy profiles
+  local profile_count
+  profile_count="$("${CAAM_BIN}" robot status claude 2>/dev/null \
+    | "${CMAX_PY}" -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    print((d.get("data") or {}).get("summary",{}).get("total_profiles", 0))
+except Exception:
+    print(0)
+' 2>/dev/null || echo 0)"
+  if [[ "${profile_count}" -lt 2 ]]; then
+    exec "${CLAUDE_BIN}" "$@"
+  fi
+
+  # Optional token injection (CMAXCTL_USE_TOKEN=1 or legacy CLAUDE_ROTATE_USE_TOKEN=1)
+  if [[ "${CMAXCTL_USE_TOKEN:-${CLAUDE_ROTATE_USE_TOKEN:-0}}" == "1" ]]; then
+    local pick_json profile tok
+    pick_json="$(cli pick --token --json 2>/dev/null || true)"
+    if [[ -n "${pick_json}" ]]; then
+      profile="$(printf '%s' "${pick_json}" | "${CMAX_PY}" -c '
+import json,sys
+try:
+    d = json.load(sys.stdin)
+    print(d.get("env",{}).get("CMAXCTL_PROFILE","") or d.get("env",{}).get("AGENT_FLEET_CAAM_PROFILE",""))
+except Exception:
+    pass
+' 2>/dev/null)"
+      if [[ -n "${profile:-}" ]]; then
+        tok="$(cli record-token --print "${profile}" 2>/dev/null || true)"
+        # Fallback: read directly via the package
+        tok="$("${CMAX_PY}" -c "from cmaxctl import secrets; t=secrets.get_token('${profile}'); print(t or '')" 2>/dev/null)"
+        if [[ -n "${tok}" ]]; then
+          export CLAUDE_CODE_OAUTH_TOKEN="${tok}"
+        fi
+      fi
+    fi
+  fi
+
+  local cooldown="${CLAUDE_ROTATE_COOLDOWN:-1h}"
+  local max_retries="${CLAUDE_ROTATE_MAX_RETRIES:-2}"
+  local algo="${CLAUDE_ROTATE_ALGO:-smart}"
+
+  exec "${CAAM_BIN}" run claude \
+    --precheck \
+    --algorithm "${algo}" \
+    --cooldown "${cooldown}" \
+    --max-retries "${max_retries}" \
+    -- "$@"
+}
+
+# ──────────────────────────────────────────────────────────────────────
+# Setup — interactive bootstrap.
+# ──────────────────────────────────────────────────────────────────────
+cmd_setup() {
+  echo
+  _b "═══════════════════════════════════════════════════════════════════"; echo
+  _b "  cmaxctl setup"; echo
+  _b "═══════════════════════════════════════════════════════════════════"; echo
+  echo "Wires up smart Claude Max account rotation."
+  echo "Re-run any time — skips anything already done."
+  echo
+
+  if ! command -v caam >/dev/null 2>&1; then
+    printf '%s caam not installed.\n' "$(_r)"
+    echo "  Install:  go install github.com/Dicklesworthstone/coding_agent_account_manager/cmd/caam@latest"
+    return 1
+  fi
+
+  if [[ ! -x "${CLAUDE_BIN}" ]] && ! command -v claude >/dev/null 2>&1; then
+    printf '%s claude binary not found.\n' "$(_r)"
+    echo "  Install: https://docs.claude.com/en/docs/claude-code/setup"
+    return 1
+  fi
+
+  # ── Detect v0 substrate and offer migration ──
+  local v0_detect; v0_detect="$(cli migrate detect 2>/dev/null || true)"
+  local v0_detected; v0_detected="$(printf '%s' "${v0_detect}" | "${CMAX_PY}" -c '
+import json,sys
+try: print(str(json.load(sys.stdin).get("detected", False)).lower())
+except: print("false")
+')"
+  if [[ "${v0_detected}" == "true" ]]; then
+    echo
+    _b "v0 personal substrate detected"; echo
+    printf '  %s\n' "$(_y) signals:"
+    printf '%s\n' "${v0_detect}" | "${CMAX_PY}" -c 'import json,sys; [print("    -", s) for s in json.load(sys.stdin).get("signals",[])]'
+    echo
+    printf '  Migrate to v1 cmaxctl config? [Y/n/d (dry-run)] '
+    local choice=""; _read_line choice
+    case "${choice,,}" in
+      d|dry|dry-run)
+        cli migrate plan
+        return 0
+        ;;
+      n|no)
+        echo "  Skipping migration. You can run 'cmax migrate apply' later."
+        ;;
+      *)
+        echo "  Running migration..."
+        cli migrate apply || true
+        echo
+        ;;
+    esac
+  fi
+
+  # ── Inventory pre-flight ──
+  local inv; inv="$(cli inventory 2>/dev/null || echo '{}')"
+  if [[ -z "${inv}" || "${inv}" == "{}" ]]; then
+    printf '%s could not read inventory.\n' "$(_r)"
+    return 1
+  fi
+
+  # Read profile list from config
+  local profiles_json
+  profiles_json="$("${CMAX_PY}" -c '
+from cmaxctl import config
+cfg = config.load()
+import json
+print(json.dumps([(p.name, p.email) for p in cfg.profiles]))
+' 2>/dev/null)"
+
+  if [[ -z "${profiles_json}" || "${profiles_json}" == "[]" ]]; then
+    echo
+    _b "No profiles configured yet. Let's add some."; echo
+    echo "You'll need at least 2 Claude Max accounts (different emails)."
+    echo "Press Ctrl+C to abort; you can re-run cmax setup later."
+    echo
+    _setup_profiles_interactive
+    inv="$(cli inventory 2>/dev/null || echo '{}')"
+    profiles_json="$("${CMAX_PY}" -c '
+from cmaxctl import config
+cfg = config.load()
+import json
+print(json.dumps([(p.name, p.email) for p in cfg.profiles]))
+' 2>/dev/null)"
+  fi
+
+  # ── Per-profile execution ──
+  echo
+  _b "Setting up per-account state"; echo
+  echo "${profiles_json}" | "${CMAX_PY}" -c "
+import json, sys
+items = json.load(sys.stdin)
+for name, email in items:
+    print(name, email)
+" | while read -r profile email; do
+    [[ -z "${profile}" ]] && continue
+    _provision_profile "${profile}" "${email}" || return 1
+  done
+
+  # ── Schedules + shell rc ──
+  _wire_up_automation
+
+  _print_completion
+}
+
+_setup_profiles_interactive() {
+  local i=1
+  while true; do
+    printf '  Profile %d name (e.g. personal, work): ' "$i"
+    local name=""; _read_line name
+    [[ -z "${name}" ]] && break
+    printf '  Profile %d email (Claude Max account): ' "$i"
+    local email=""; _read_line email
+    "${CMAX_PY}" -c "
+from cmaxctl import config
+cfg = config.load()
+cfg.profiles.append(config.Profile(name='${name}', email='${email}'))
+config.write(cfg)
+print('  ✓ added profile:', '${name}', '<${email}>')
+" 2>&1 || return 1
+    i=$((i+1))
+    if [[ $i -gt 2 ]]; then
+      printf '  Add another profile? [y/N] '
+      local more=""; _read_line more
+      [[ "${more,,}" != "y" ]] && break
+    fi
+  done
+}
+
+_provision_profile() {
+  local profile="$1" email="$2"
+  local creds_present
+  creds_present="$(printf '%s' "${inv}" | "${CMAX_PY}" -c "
+import json,sys
+d = json.load(sys.stdin)
+print(str(d.get('profiles',{}).get('${profile}',{}).get('credentials_present', False)).lower())
+" 2>/dev/null)"
+
+  echo
+  _b "── ${email}  [${profile}] ──"; echo
+
+  # Sign in if needed
+  if [[ "${creds_present}" != "true" ]]; then
+    printf '  %s preparing isolated workspace\n' "$(_y)"
+    "${CMAX_PY}" -c "
+from cmaxctl import caam
+ok, err = caam.profile_ensure('${profile}')
+import sys
+sys.exit(0 if ok else 1)
+" || {
+      printf '  %s caam profile_ensure failed for %s\n' "$(_r)" "${profile}" >&2
+      return 1
+    }
+
+    printf '  %s opening Claude sign-in. Use account: \033[1m%s\033[0m\n' "$(_y)" "${email}"
+    if ! _login_profile "${profile}" "${email}"; then
+      printf '  %s sign-in did not complete. Re-run cmax setup to retry.\n' "$(_r)" >&2
+      return 1
+    fi
+
+    if ! _same_account_guard "${profile}" "${email}"; then
+      return 1
+    fi
+    printf '  %s signed in (account verified)\n' "$(_g)"
+  fi
+
+  # Token if needed
+  local token_present
+  token_present="$(printf '%s' "${inv}" | "${CMAX_PY}" -c "
+import json,sys
+d = json.load(sys.stdin)
+print(str(d.get('tokens',{}).get('${profile}',{}).get('present', False)).lower())
+" 2>/dev/null)"
+  if [[ "${token_present}" != "true" ]]; then
+    _issue_token_for "${profile}" "${email}" || return 1
+  fi
+  return 0
+}
+
+_login_profile() {
+  local profile="$1" email="$2"
+  local env_lines
+  env_lines="$("${CAAM_BIN}" env claude "${profile}" 2>/dev/null || true)"
+  if [[ -z "${env_lines}" ]]; then
+    printf '  %s caam env returned nothing for %s\n' "$(_r)" "${profile}" >&2
+    return 1
+  fi
+  local errfile; errfile="$(mktemp -t cmax-login.XXXXXX 2>/dev/null || echo /dev/null)"
+  (
+    eval "${env_lines}"
+    if [[ -t 0 && -t 1 && -t 2 ]]; then
+      "${CLAUDE_BIN}" auth login --claudeai --email "${email}" 2>"${errfile}"
+    elif { exec 9<>/dev/tty; } 2>/dev/null; then
+      "${CLAUDE_BIN}" auth login --claudeai --email "${email}" <&9 2>"${errfile}"
+      exec 9<&-
+    else
+      "${CLAUDE_BIN}" auth login --claudeai --email "${email}" 2>"${errfile}"
+    fi
+  )
+  local rc=$?
+  rm -f "${errfile}" 2>/dev/null
+  # Verify creds landed
+  local cred_path
+  cred_path="$("${CMAX_PY}" -c "from cmaxctl import caam; print(caam.profile_creds_path('${profile}'))")"
+  if [[ -f "${cred_path}" ]]; then
+    return 0
+  fi
+  return ${rc}
+}
+
+_same_account_guard() {
+  local profile="$1" email="$2"
+  local mine
+  mine="$("${CMAX_PY}" -c "from cmaxctl import identity; print(identity.profile_identity_marker('${profile}') or '')")"
+  if [[ -z "${mine}" ]]; then
+    return 0  # don't block on a probe failure
+  fi
+  local matches
+  matches="$("${CMAX_PY}" -c "
+from cmaxctl import config, identity
+cfg = config.load()
+matches = []
+for other in cfg.profiles:
+    if other.name == '${profile}': continue
+    m = identity.profile_identity_marker(other.name)
+    if m and m == '${mine}':
+        matches.append(other.name)
+print(','.join(matches))
+")"
+  if [[ -n "${matches}" ]]; then
+    echo
+    printf '  %s SAME ACCOUNT DETECTED.\n' "$(_r)"
+    echo "  ${profile} signed into the same Claude account as: ${matches}"
+    echo "  Both profiles must point at DIFFERENT accounts for rotation to work."
+    echo
+    "${CMAX_PY}" -c "from cmaxctl import caam; caam.profile_purge('${profile}')"
+    return 1
+  fi
+  return 0
+}
+
+_issue_token_for() {
+  local profile="$1" email="$2"
+  echo
+  printf '  %s Issuing long-lived token for %s\n' "$(_y)" "${email}"
+  echo "  A browser window will open. Approve, then COPY the token at the end."
+
+  local env_lines
+  env_lines="$("${CAAM_BIN}" env claude "${profile}" 2>/dev/null || true)"
+  if [[ -z "${env_lines}" ]]; then
+    printf '  %s caam env failed for %s\n' "$(_r)" "${profile}" >&2
+    return 1
+  fi
+  (
+    eval "${env_lines}"
+    _with_tty_stdin "${CLAUDE_BIN}" setup-token
+  ) || {
+    printf '  %s claude setup-token failed; aborting %s\n' "$(_r)" "${profile}" >&2
+    return 1
+  }
+
+  printf '  Paste the token (input hidden): '
+  local new_tok=""
+  _read_line new_tok hidden
+  echo
+  if [[ -z "${new_tok}" ]]; then
+    printf '  %s empty token; skipping %s\n' "$(_r)" "${profile}" >&2
+    return 1
+  fi
+  if [[ ! "${new_tok}" =~ ^sk-ant-oat01- ]]; then
+    printf '  %s token does not start with sk-ant-oat01-\n' "$(_y)"
+    printf '  Use anyway? [y/N] '
+    local confirm=""; _read_line confirm
+    [[ "${confirm,,}" != "y" ]] && return 1
+  fi
+
+  local store_out
+  store_out="$("${CMAX_PY}" -c "
+from cmaxctl import secrets
+backend, err = secrets.set_token('${profile}', '${new_tok}', '${email}')
+import json
+print(json.dumps({'backend': backend, 'error': err}))
+" 2>&1)"
+  local backend err
+  backend="$(printf '%s' "${store_out}" | "${CMAX_PY}" -c 'import json,sys; print(json.load(sys.stdin).get("backend") or "?")' 2>/dev/null || echo "?")"
+  err="$(printf '%s' "${store_out}" | "${CMAX_PY}" -c 'import json,sys; print(json.load(sys.stdin).get("error") or "")' 2>/dev/null || echo "")"
+
+  cli record-token "${profile}" "${email}" >/dev/null 2>&1 || true
+  unset new_tok
+
+  if [[ "${backend}" == "keychain" || "${backend}" == "secret_tool" ]]; then
+    printf '  %s token stored (%s)\n' "$(_g)" "${backend}"
+  elif [[ "${backend}" == "env" ]]; then
+    printf '  %s token stored (env file, mode 600)\n' "$(_g)"
+  else
+    printf '  %s token store failed: %s\n' "$(_r)" "${err}" >&2
+    return 1
+  fi
+}
+
+_wire_up_automation() {
+  echo
+  _b "Automation"; echo
+  # Use Python platform.schedule_install
+  "${CMAX_PY}" -c "
+from cmaxctl import platform, config, paths
+import sys
+cfg = config.load()
+ok1, err1 = platform.schedule_install('watcher',
+    [sys.executable, '-m', 'cmaxctl.watcher'],
+    every_s=cfg.watcher.interval_s,
+    owner=cfg.meta.repo_owner)
+print(('  ✓' if ok1 else '  →'), 'rotation watcher', err1)
+ok2, err2 = platform.schedule_install('watchdog',
+    [sys.executable, '-m', 'cmaxctl.watchdog'],
+    every_s=86400,
+    owner=cfg.meta.repo_owner)
+print(('  ✓' if ok2 else '  →'), 'daily watchdog', err2)
+" 2>&1
+
+  cli install-shell 2>&1 | sed 's/^/  /' || true
+}
+
+_print_completion() {
+  echo
+  if [[ -t 1 ]]; then
+    printf '\033[1;32m%s\033[0m\n' "All set. From a new terminal, just type:  cmax"
+  else
+    echo "All set. From a new terminal, just type:  cmax"
+  fi
+  echo
+  echo "Verify any time with:"
+  echo "  cmax usage    — live utilization"
+  echo "  cmax doctor   — health check"
+  echo
+  printf '%s Quick live check:\n' "$(_y)"
+  cli usage 2>&1 || true
+}
+
+# ──────────────────────────────────────────────────────────────────────
+# Rotate — re-issue tokens for one or all profiles.
+# ──────────────────────────────────────────────────────────────────────
+cmd_rotate() {
+  local target="${1:-all}"
+  local profiles=()
+  if [[ "${target}" == "all" ]]; then
+    while IFS= read -r line; do
+      profiles+=("${line}")
+    done < <("${CMAX_PY}" -c "
+from cmaxctl import config
+cfg = config.load()
+for p in cfg.profiles: print(p.name)
+")
+  else
+    profiles=("${target}")
+  fi
+
+  local i=0
+  for p in "${profiles[@]}"; do
+    [[ -z "${p}" ]] && continue
+    local email
+    email="$("${CMAX_PY}" -c "
+from cmaxctl import config
+cfg = config.load()
+for prof in cfg.profiles:
+    if prof.name == '${p}':
+        print(prof.email or '')
+        break
+")"
+    echo
+    echo "── rotating token for ${p} (${email:-no-email}) ──"
+    _issue_token_for "${p}" "${email}" || true
+  done
+}
+
+# ──────────────────────────────────────────────────────────────────────
+# Subcommands forwarded to the Python CLI.
+# ──────────────────────────────────────────────────────────────────────
+cmd_help() {
+  sed -n '2,21p' "$0"
+}
+
+cmd_enable()  { rm -f "${CMAX_DISABLED}" && echo "cmax: enabled"; }
+cmd_disable() {
+  mkdir -p "$(dirname "${CMAX_DISABLED}")"
+  date +%s > "${CMAX_DISABLED}"
+  echo "cmax: disabled (raw \`claude\` will run unwrapped)"
+}
+
+# ──────────────────────────────────────────────────────────────────────
+# Dispatch
+# ──────────────────────────────────────────────────────────────────────
+if [[ $# -eq 0 ]]; then
+  run_claude_default_mode
+fi
+
+if is_subcommand "$1"; then
+  sub="$1"; shift
+  case "${sub}" in
+    setup)        cmd_setup "$@" ;;
+    rotate)       cmd_rotate "$@" ;;
+    enable)       cmd_enable ;;
+    disable)      cmd_disable ;;
+    help|--help|-h) cmd_help ;;
+    # Everything else delegates to the Python CLI
+    status|doctor|pick|usage|statusline|recover|logs|migrate|version)
+                  cli "${sub}" "$@" ;;
+  esac
+else
+  run_claude_default_mode "$@"
+fi

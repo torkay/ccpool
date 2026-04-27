@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd ~/Agent/cmaxctl && python3 -c \\\"\\nimport sys; sys.path.insert(0, '.')\\nfrom cmaxctl import cli\\nprint('cli imports cleanly')\\nprint('subcommands:', sorted(cli.COMMANDS.keys()))\\n\\\" 2>&1...",
+  "error": "Exit code 64\ncli imports cleanly\nsubcommands: ['doctor', 'install-shell', 'inventory', 'logs', 'migrate', 'pick', 'record-token', 'recover', 'remove-shell', 'status', 'statusline', 'usage', 'version']\n---\ncmaxctl: 0.1.0.dev0\ncaam:    Error: unknown flag: --version\nUsage:\n  caam [flags]\n  caam [command]\n\nAvailable Commands:\n  activate         Activate a profile (instant switch)\n  add              Add a new account with one command\n  alias            Manage profile aliases\n  auth             Manag...",
+  "timestamp": "2026-04-27T11:13:38.109Z",
+  "retry_count": 1
+}

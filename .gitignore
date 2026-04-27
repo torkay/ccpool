@@ -1,0 +1,60 @@
+# cmaxctl-specific runtime state — never commit
+tokens.env
+tokens.json
+usage_cache.json
+*.flag
+disabled
+watcher.ndjson
+watcher.counter
+watcher.last_rotate
+
+# Operator-side configuration paths
+.config/cmaxctl/
+.local/share/cmaxctl/
+Library/Application Support/cmaxctl/
+
+# Python build artefacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+.eggs/
+*.egg
+.installed.cfg
+
+# Test/coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Virtual envs
+.venv/
+venv/
+env/
+.env
+.env.local
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Project
+docs/_build/
+site/
+.local-cache/
