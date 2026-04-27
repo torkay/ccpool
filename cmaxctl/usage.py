@@ -17,7 +17,7 @@ import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from cmaxctl import caam, config, paths
@@ -52,7 +52,7 @@ class Usage:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Usage":
+    def from_dict(cls, d: dict) -> Usage:
         for k in ("five_hour", "seven_day", "seven_day_sonnet"):
             v = d.get(k)
             if isinstance(v, dict):

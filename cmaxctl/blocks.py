@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from cmaxctl import caam, config, paths
@@ -104,14 +104,14 @@ def _iter_assistant_usage(projects_dir: Path, *, since: datetime | None = None):
 
 def _block_start(ts: datetime) -> datetime:
     """Round down to hour boundary in UTC (ccusage parity)."""
-    return ts.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    return ts.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
 
 
 def active_block(profile: str | None = None, *, lookback_hours: int = 12,
                  cfg: config.Config | None = None) -> ActiveBlock | None:
     """Compute the currently-active 5h block for a profile."""
     projects_dir = _resolve_projects_dir(profile, cfg)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     since = now - timedelta(hours=lookback_hours)
     entries = sorted(_iter_assistant_usage(projects_dir, since=since), key=lambda x: x[0])
     if not entries:
@@ -123,7 +123,7 @@ def active_block(profile: str | None = None, *, lookback_hours: int = 12,
     block_entries: list[tuple[datetime, dict]] = []
 
     for ts, usage in entries:
-        ts_utc = ts.astimezone(timezone.utc)
+        ts_utc = ts.astimezone(UTC)
         if current_start is None:
             current_start = _block_start(ts_utc)
             current_end = current_start + BLOCK_DURATION

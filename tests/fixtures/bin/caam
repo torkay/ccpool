@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Mock `caam` binary for cmaxctl tests.
+
+Honours the pinned CLI shape (ADR-0006). Behaviour controlled by env vars so
+a single binary can simulate "fresh", "two-profiles", "rate-limited", etc.
+
+    CMAX_MOCK_CAAM_PROFILES   — comma list of profile names ("a,b" → tor1+tor2)
+    CMAX_MOCK_CAAM_DIR        — root for fake profile dirs (defaults to a tmp
+                                under $XDG_DATA_HOME/caam if set, else $HOME)
+    CMAX_MOCK_CAAM_NEXT       — profile name `caam robot next` should return
+    CMAX_MOCK_CAAM_PRECHECK   — JSON literal `caam robot precheck` should emit
+    CMAX_MOCK_CAAM_VERSION    — version string (default "caam version mock 0.0.1")
+
+Stdlib only. Exits 0 on success, non-zero on input error to match real caam.
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def _profiles_root() -> Path:
+    if os.environ.get("CMAX_MOCK_CAAM_DIR"):
+        return Path(os.environ["CMAX_MOCK_CAAM_DIR"]) / "profiles"
+    base = os.environ.get("XDG_DATA_HOME") or os.path.join(os.environ["HOME"], ".local", "share")
+    return Path(base) / "caam" / "profiles"
+
+
+def _seed_profiles() -> list[str]:
+    raw = os.environ.get("CMAX_MOCK_CAAM_PROFILES", "").strip()
+    return [p for p in raw.split(",") if p]
+
+
+def _ensure_profile_dir(provider: str, name: str) -> Path:
+    d = _profiles_root() / provider / name
+    d.mkdir(parents=True, exist_ok=True)
+    creds = d / ".credentials.json"
+    if not creds.exists():
+        creds.write_text(json.dumps({
+            "claudeAiOauth": {
+                "accessToken": "mock-access-token",
+                "refreshToken": "mock-refresh-token",
+                "scopes": ["user:profile"],
+            }
+        }))
+    return d
+
+
+def cmd_version() -> int:
+    print(os.environ.get("CMAX_MOCK_CAAM_VERSION", "caam version mock 0.0.1"))
+    return 0
+
+
+def cmd_profile(args: list[str]) -> int:
+    if not args:
+        return 64
+    sub = args[0]
+    if sub == "add" and len(args) >= 3:
+        provider, name = args[1], args[2]
+        _ensure_profile_dir(provider, name)
+        print(json.dumps({"success": True, "data": {"name": name}}))
+        return 0
+    if sub == "delete" and len(args) >= 3:
+        provider, name = args[1], args[2]
+        d = _profiles_root() / provider / name
+        if d.exists():
+            import shutil
+            shutil.rmtree(d)
+        print(json.dumps({"success": True}))
+        return 0
+    return 64
+
+
+def cmd_env(args: list[str]) -> int:
+    if len(args) < 2:
+        return 64
+    provider, name = args[0], args[1]
+    profile_dir = _profiles_root() / provider / name
+    print(f'export CLAUDE_CONFIG_DIR="{profile_dir}"')
+    print('export CLAUDE_CODE_OAUTH_TOKEN="mock-access-token"')
+    return 0
+
+
+def _list_profiles_for(provider: str) -> list[dict]:
+    seeded = _seed_profiles()
+    for n in seeded:
+        _ensure_profile_dir(provider, n)
+    fs_root = _profiles_root() / provider
+    if not fs_root.exists():
+        return []
+    out = []
+    for d in sorted(fs_root.iterdir()):
+        if d.is_dir() and (d / ".credentials.json").exists():
+            out.append({"name": d.name, "health": {"status": "healthy"}, "active": False})
+    return out
+
+
+def cmd_robot(args: list[str]) -> int:
+    if not args:
+        return 64
+    sub = args[0]
+    if sub == "status" and len(args) >= 2:
+        provider = args[1]
+        payload = {
+            "success": True,
+            "data": {"providers": [{"name": provider, "profiles": _list_profiles_for(provider)}]},
+        }
+        print(json.dumps(payload))
+        return 0
+    if sub == "next" and len(args) >= 2:
+        target = os.environ.get("CMAX_MOCK_CAAM_NEXT")
+        if not target:
+            profiles = _list_profiles_for(args[1])
+            target = profiles[0]["name"] if profiles else ""
+        print(json.dumps({"data": {"profile": {"name": target}}}))
+        return 0
+    if sub == "precheck" and len(args) >= 2:
+        canned = os.environ.get("CMAX_MOCK_CAAM_PRECHECK")
+        if canned:
+            print(canned)
+            return 0
+        print(json.dumps({"data": {"selected": None, "rotated": False}}))
+        return 0
+    if sub == "act" and len(args) >= 4 and args[1] == "activate":
+        print(json.dumps({"success": True, "data": {"active": args[3]}}))
+        return 0
+    return 64
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2:
+        print("usage: caam {version|profile|env|robot} ...", file=sys.stderr)
+        return 64
+    cmd = argv[1]
+    rest = argv[2:]
+    if cmd == "version":
+        return cmd_version()
+    if cmd == "profile":
+        return cmd_profile(rest)
+    if cmd == "env":
+        return cmd_env(rest)
+    if cmd == "robot":
+        return cmd_robot(rest)
+    return 64
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

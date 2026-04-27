@@ -21,7 +21,6 @@ from pathlib import Path
 
 from cmaxctl import paths
 
-
 # ────────────────────────── OS detection ──────────────────────────
 
 def is_macos() -> bool:

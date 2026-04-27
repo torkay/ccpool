@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""Mock `claude` binary for cmaxctl tests.
+
+Honours the subset of the Claude Code CLI that cmaxctl invokes:
+
+    claude --version              → prints version line
+    claude setup-token            → prints a fake long-lived token
+    claude auth login --claudeai --email <addr>
+                                  → returns rc 0 (no interactive prompt)
+
+Behaviour controlled by env vars:
+
+    CMAX_MOCK_CLAUDE_VERSION   — version string (default "1.0.0 (Claude Code)")
+    CMAX_MOCK_CLAUDE_TOKEN     — fake token for `setup-token` (default "sk-ant-oat01-mock")
+    CMAX_MOCK_CLAUDE_FAIL      — if set to "1", every command exits 1
+
+Stdlib only.
+"""
+from __future__ import annotations
+
+import os
+import sys
+
+
+def main(argv: list[str]) -> int:
+    if os.environ.get("CMAX_MOCK_CLAUDE_FAIL") == "1":
+        print("mock claude failure", file=sys.stderr)
+        return 1
+    if len(argv) < 2:
+        print("usage: claude {--version|setup-token|auth} ...", file=sys.stderr)
+        return 64
+    arg = argv[1]
+    if arg in ("--version", "-v"):
+        print(os.environ.get("CMAX_MOCK_CLAUDE_VERSION", "1.0.0 (Claude Code)"))
+        return 0
+    if arg == "setup-token":
+        print(os.environ.get("CMAX_MOCK_CLAUDE_TOKEN", "sk-ant-oat01-mock"))
+        return 0
+    if arg == "auth" and len(argv) >= 3 and argv[2] == "login":
+        return 0
+    print(f"mock claude: unhandled {argv[1:]}", file=sys.stderr)
+    return 64
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

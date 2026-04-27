@@ -119,7 +119,7 @@ def synthesize_config_from_v0(d: V0Detection,
         cfg.profiles.append(config.Profile(
             name=name,
             email=accounts.get(name, ""),
-            description=f"migrated from v0 personal substrate",
+            description="migrated from v0 personal substrate",
         ))
     return cfg
 
@@ -150,7 +150,7 @@ def migrate_keychain_tokens(profiles: list[str]) -> dict[str, str]:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             out[p] = "failed"
             continue
-        backend, err = secrets.set_token(p, tok)
+        _backend, err = secrets.set_token(p, tok)
         out[p] = "copied" if not err.startswith("native backend failed AND") else "failed"
     return out
 

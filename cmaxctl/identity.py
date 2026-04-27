@@ -19,7 +19,6 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any
 
 from cmaxctl import caam, config
 

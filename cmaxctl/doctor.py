@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import datetime as _dt
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +26,7 @@ SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
 # ────────────────────────── helpers ──────────────────────────
 
 def _utc_now() -> _dt.datetime:
-    return _dt.datetime.now(_dt.timezone.utc)
+    return _dt.datetime.now(_dt.UTC)
 
 
 def count_backups() -> int:
@@ -161,7 +160,7 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
             findings.append({
                 "severity": "MEDIUM", "code": f"profile_stub_{name}",
                 "message": f"profile {name} dir exists but credentials missing",
-                "fix": f"cmax setup (will detect and re-provision)",
+                "fix": "cmax setup (will detect and re-provision)",
             })
 
     if profile_count >= 2 and not platform.schedule_status("watcher", cfg.meta.repo_owner):

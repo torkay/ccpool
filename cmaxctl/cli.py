@@ -33,13 +33,24 @@ import json
 import shutil
 import subprocess
 import sys
+from datetime import UTC
 from typing import Any
 
 from cmaxctl import (
-    _version, blocks, caam, config, doctor, identity, migrate,
-    notify, paths, pick, secrets, shell, status, statusline, usage,
+    _version,
+    caam,
+    config,
+    doctor,
+    identity,
+    migrate,
+    paths,
+    pick,
+    secrets,
+    shell,
+    status,
+    statusline,
+    usage,
 )
-
 
 # ────────────────────────── helpers ──────────────────────────
 
@@ -57,7 +68,7 @@ def _print_findings(findings: list[dict[str, Any]], machine: bool) -> None:
     by_sev: dict[str, list] = {"CRITICAL": [], "HIGH": [], "MEDIUM": [], "LOW": []}
     for f in findings:
         by_sev.setdefault(f.get("severity", "LOW"), []).append(f)
-    from cmaxctl.status import RED, YELLOW, GREY, DIM, _c
+    from cmaxctl.status import DIM, GREY, RED, YELLOW, _c
     out: list[str] = []
     for sev in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
         if not by_sev.get(sev):
@@ -96,7 +107,7 @@ def cmd_doctor(args: list[str]) -> int:
         log = doctor.autofix(findings, cfg)
         findings = doctor.diagnose(cfg)
         if not machine:
-            from cmaxctl.status import _c, DIM
+            from cmaxctl.status import DIM, _c
             for ln in log:
                 print(_c(f"  fix: {ln}", DIM))
             print()
@@ -134,7 +145,7 @@ def cmd_usage(args: list[str]) -> int:
         return 0
 
     # Human render (opus column dropped, dollars formatting)
-    from cmaxctl.status import BOLD, DIM, GREEN, YELLOW, RED, _c
+    from cmaxctl.status import BOLD, DIM, GREEN, RED, YELLOW, _c
 
     def _fmt_pct(p: float | None) -> str:
         if p is None:
@@ -145,12 +156,12 @@ def cmd_usage(args: list[str]) -> int:
     def _resets(iso_str: str | None) -> str:
         if not iso_str:
             return "—"
-        from datetime import datetime, timezone
+        from datetime import datetime
         try:
             dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
         except (ValueError, TypeError):
             return "—"
-        secs = int((dt - datetime.now(timezone.utc)).total_seconds())
+        secs = int((dt - datetime.now(UTC)).total_seconds())
         if secs <= 0:
             return "now"
         h, rem = divmod(secs, 3600)
@@ -352,7 +363,7 @@ def cmd_record_token(args: list[str]) -> int:
         except (json.JSONDecodeError, OSError):
             data = {}
     data[profile] = {
-        "issued_at": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "issued_at": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "account": account,
     }
     p.parent.mkdir(parents=True, exist_ok=True)

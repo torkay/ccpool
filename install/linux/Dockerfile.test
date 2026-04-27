@@ -1,0 +1,42 @@
+# Linux test image for cmaxctl.
+#
+# Reproduces the CI matrix locally so contributors on macOS can validate
+# the Linux parity surface (XDG paths, secret-tool, systemd-user *units*,
+# bashrc + fish managed-block writing) before pushing.
+#
+# Build:   docker build -f install/linux/Dockerfile.test -t cmaxctl-test .
+# Run:     docker run --rm -v "$PWD:/repo" -w /repo cmaxctl-test
+#
+# The default CMD runs the full `pytest` suite; the keyring-roundtrip test
+# is opted-in via `CMAXCTL_TEST_LINUX_KEYRING=1`.
+ARG UBUNTU_VERSION=24.04
+FROM ubuntu:${UBUNTU_VERSION}
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    LANG=C.UTF-8
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        python3 python3-venv python3-pip \
+        python3-dev \
+        libsecret-tools \
+        gnome-keyring \
+        dbus-user-session dbus-x11 \
+        cron \
+        fish \
+        bash zsh \
+        git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home --shell /bin/bash tester
+USER tester
+WORKDIR /home/tester
+
+ENV PATH=/home/tester/.local/bin:$PATH
+RUN python3 -m pip install --user --upgrade pip pytest ruff
+
+WORKDIR /repo
+CMD ["bash", "-lc", "pip install --user -e .[dev] && pytest tests/unit tests/integration -v"]
