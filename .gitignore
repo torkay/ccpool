@@ -58,3 +58,14 @@ Desktop.ini
 docs/_build/
 site/
 .local-cache/
+
+# Tooling state from agent harnesses (never publish)
+.omc/
+.claude/
+.codex/
+.gemini/
+.agent/
+.superpowers/
+.archive/
+.artifacts/
+.playwright-mcp/
