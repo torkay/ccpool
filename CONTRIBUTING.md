@@ -1,69 +1,106 @@
 # Contributing to cmaxctl
 
-Thanks for your interest. cmaxctl is a small project; the contribution flow is correspondingly light.
+PRs and issues welcome. This file covers the dev loop, style expectations, and how to ship a release.
 
 ## Dev setup
 
 ```bash
 git clone https://github.com/torkay/cmaxctl
 cd cmaxctl
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+python -m venv .venv && source .venv/bin/activate
+pip install -e .[dev]
 ```
 
-You'll also need `caam` and `claude` on PATH for full integration tests. Install instructions: see [docs/INSTALL.md](docs/INSTALL.md).
+`[dev]` pulls in `pytest`, `ruff`, `pyyaml` (workflow validation only — not a runtime dep). The runtime itself is stdlib-only ([ADR-0003](docs/ADRs/0003-stdlib-only-python.md)).
+
+You'll also want:
+
+```bash
+brew install bats-core         # for integration tests
+brew install caam              # or: go install github.com/Dicklesworthstone/coding_agent_account_manager/cmd/caam@latest
+brew install claude            # or follow Anthropic's install guide
+```
+
+The integration tests use mocked `caam` and `claude` binaries (`tests/fixtures/bin/`) so you don't need real ones to run the suite. But you do need them for end-to-end smoke testing of your changes.
 
 ## Running tests
 
 ```bash
-# Unit tests (no shell, no network)
-pytest tests/unit/
-
-# Integration tests (mocked caam + claude)
-bats tests/integration/
-
-# End-to-end (full mocked tree)
-bats tests/e2e/
-
-# Lint + type-check
-ruff check .
-mypy cmaxctl/
-shellcheck bin/cmax
+pytest tests/unit tests/integration -v        # unit + integration
+bats tests/integration tests/e2e              # bash-side integration + e2e
+ruff check cmaxctl tests                      # lint
 ```
 
-CI runs the full matrix on macos-13 / macos-14 / ubuntu-22.04 / ubuntu-24.04.
+The full test matrix runs on push (see `.github/workflows/{linux,macos}.yml`). Locally, the macOS path is what most contributors will hit; for Linux validation:
+
+```bash
+./install/linux/run-tests-in-docker.sh         # builds + runs in Ubuntu container
+```
 
 ## Style
 
-- **Stdlib only** in the `cmaxctl/` Python package. No external runtime dependencies. (Dev tooling like ruff/mypy/pytest is fine.)
-- **bash, not zsh** in `bin/cmax`. POSIX where reasonable.
-- **No comments unless they explain a non-obvious why**. Identifier names should carry the what.
-- **Tables in docs**, not narrative paragraphs. Public docs (under `docs/`) are exempt from agent-internal docs conventions.
-- **One concept per module** in the Python package. Modules over 500 lines are a smell; consider splitting.
+- **Python**: stdlib-only (no `requests`, `pydantic`, etc.). Single-file modules where possible. `ruff check --fix` is your friend.
+- **Bash**: stay POSIX-compatible enough that `bash 3.2` (macOS default) works. Avoid bashisms in `bin/cmax`.
+- **Identity scrub**: NEVER commit a personal identifier (your username, email, etc.). The CI `identity-scrub` job hard-fails on a hit; if you tripped it, see the error message for the specific file:line.
+- **Comments**: write them only when the WHY is non-obvious. The CI doesn't enforce this but reviewers will trim them.
+- **Tests**: every new finding code in `doctor.py` needs a unit test. Every new subcommand in `bin/cmax` needs a bats case.
+- **No SQLite, no resident daemon, no node tooling.** These are deliberate (see ADRs).
 
-## Branch + commit
+## Adding a feature
 
-- Branch from `main`; PR back to `main`.
-- Squash-merge; commit message becomes the changelog entry.
-- Reference issues via `Fixes #N` or `Refs #N` in the body.
-- No co-author trailers required, but welcome.
+1. **Open an issue first** for anything bigger than a one-line fix. Saves rework if the design needs to land somewhere different.
+2. **Branch off `main`.** PRs target `main`; squash-merge keeps history linear.
+3. **Add a CHANGELOG entry** under `[Unreleased]` (Keep-a-Changelog format).
+4. **Add tests** at the appropriate level (unit if it's pure-function; integration/bats if it crosses the python↔bash boundary).
+5. **Run the gate locally** before opening the PR:
+   ```bash
+   pytest tests/unit tests/integration -q
+   bats tests/integration tests/e2e
+   ruff check cmaxctl tests
+   ```
 
 ## Adding a doctor finding
 
-1. Add the code to `cmaxctl/doctor.py:diagnose()` with severity + fix string.
-2. Add an autofix branch in `autofix()` if non-interactive.
+1. Add the finding to `cmaxctl/doctor.py` with a stable code (`snake_case`).
+2. Document it in `docs/REFERENCE.md` (severity + auto-fix table) and `docs/TROUBLESHOOTING.md` (symptom-indexed entry).
 3. Add a unit test in `tests/unit/test_doctor.py`.
-4. Document in `docs/REFERENCE.md` under "Doctor finding codes".
+4. If there's an auto-fix, the test must verify idempotency (running fix twice produces the same state).
 
 ## Adding a provider
 
-See [docs/PROVIDERS.md](docs/PROVIDERS.md). At a minimum: implement the strategy table entries (login, token-issue, usage, identity, blocks). Stub anything Anthropic-specific. Add provider-specific tests.
+See [docs/PROVIDERS.md § Adding a new provider](docs/PROVIDERS.md#adding-a-new-provider).
 
-## Releasing
+## Cutting a release
 
-Maintainers only. See [docs/REFERENCE.md#release-process](docs/REFERENCE.md#release-process).
+Releases are gated on three lanes being green: macOS CI, Linux CI, identity-scrub.
+
+1. **Update CHANGELOG.md.** Move `[Unreleased]` items into a new `[X.Y.Z]` section with the date.
+2. **Bump `cmaxctl/_version.py`.** The release workflow verifies the tag matches the file.
+3. **Commit + tag.** Use signed tags via OIDC; never commit a GPG key.
+   ```bash
+   git commit -am "Release X.Y.Z"
+   git tag -s vX.Y.Z -m "vX.Y.Z"
+   git push origin main vX.Y.Z
+   ```
+4. **CI takes over.** `release.yml` builds sdist + wheel, publishes to PyPI via OIDC trusted publishing, creates the GitHub release with auto-changelog, and triggers the Homebrew formula bump.
+5. **Verify on a clean VM.** `pip install cmaxctl --user; cmax doctor` should be green on a fresh macOS + a fresh Ubuntu.
+
+Semver:
+
+| Bump | When |
+|---|---|
+| MAJOR | `config.toml` schema break · path layout break · install path break |
+| MINOR | new subcommand · new provider · new doctor finding · new platform |
+| PATCH | bug fix · doc fix · doctor message wording · internal refactor |
+
+## Reporting a security issue
+
+See [SECURITY.md](SECURITY.md). Please don't file security issues in public GitHub issues.
 
 ## Code of conduct
 
-Be respectful. Project maintainers will mediate disputes.
+Be excellent. Don't be an asshole. We follow the spirit of the [Contributor Covenant](https://www.contributor-covenant.org/) without ceremoniously adopting it as a separate file.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Contributions are accepted under the same terms.

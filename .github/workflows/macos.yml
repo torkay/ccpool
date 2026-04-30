@@ -1,0 +1,78 @@
+name: macos
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: ${{ matrix.os }} · py ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-14]
+        python: ['3.11', '3.12', '3.13']
+        exclude:
+          # macos-13 cannot run py3.13 reliably yet
+          - os: macos-13
+            python: '3.13'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install (editable + dev)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+      - name: Lint (ruff)
+        run: ruff check cmaxctl tests
+      - name: Unit + integration tests
+        run: pytest tests/unit tests/integration -v
+      - name: Install bats
+        run: brew install bats-core
+      - name: Bats integration + e2e
+        run: bats tests/integration tests/e2e
+
+  identity-scrub:
+    name: identity-scrub
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify zero personal-id leakage
+        run: |
+          set -e
+          if grep -rE '(torrinkay|tor1|tor2|amatorri|/Users/)' \
+                --include='*.py' --include='*.sh' --include='*.toml' \
+                --include='*.md' --include=cmax \
+                cmaxctl tests docs bin \
+              | grep -vE '(tests/fixtures|cmaxctl/migrate.py|CHANGELOG\.md|/__pycache__/|\.git/)'; then
+            echo "::error::personal identifier leaked into the source tree" >&2
+            exit 1
+          fi
+          echo "identity-scrub: clean"
+
+  package:
+    name: package (sdist + wheel)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cmaxctl-dist-macos
+          path: dist/
+          retention-days: 7

@@ -34,9 +34,12 @@ def _seed_profiles() -> list[str]:
 
 
 def _ensure_profile_dir(provider: str, name: str) -> Path:
+    # Match production layout: caam isolates each profile's claude-code state
+    # under <profile>/xdg_config/claude-code/. See cmaxctl.paths.caam_profile_creds_path.
     d = _profiles_root() / provider / name
-    d.mkdir(parents=True, exist_ok=True)
-    creds = d / ".credentials.json"
+    creds_dir = d / "xdg_config" / "claude-code"
+    creds_dir.mkdir(parents=True, exist_ok=True)
+    creds = creds_dir / ".credentials.json"
     if not creds.exists():
         creds.write_text(json.dumps({
             "claudeAiOauth": {
@@ -92,7 +95,8 @@ def _list_profiles_for(provider: str) -> list[dict]:
         return []
     out = []
     for d in sorted(fs_root.iterdir()):
-        if d.is_dir() and (d / ".credentials.json").exists():
+        creds = d / "xdg_config" / "claude-code" / ".credentials.json"
+        if d.is_dir() and creds.exists():
             out.append({"name": d.name, "health": {"status": "healthy"}, "active": False})
     return out
 

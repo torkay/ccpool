@@ -34,6 +34,41 @@ cmax doctor   # health check
 
 Day-to-day, `cmax setup` aliases `claude` → `cmax` so you keep your muscle memory.
 
+## 30-second demo
+
+```bash
+$ cmax setup
+═══════════════════════════════════════════════════════════════════
+  cmaxctl setup
+═══════════════════════════════════════════════════════════════════
+Wires up smart Claude Max account rotation.
+
+  Profile 1 name: personal
+  Profile 1 email: you@example.com
+  → opening Claude sign-in. Use account: you@example.com
+  ✓ signed in (account verified)
+  → Issuing long-lived token for you@example.com
+  ✓ token stored (keychain)
+
+  Profile 2 name: secondary
+  Profile 2 email: you+work@example.com
+  ✓ signed in · ✓ token stored (keychain)
+
+Automation
+  ✓ rotation watcher
+  ✓ daily watchdog
+  ✓ shell-rc managed-block written
+
+All set. From a new terminal, just type:  cmax
+
+$ cmax statusline --short
+🟢 personal 42% / 71%
+
+$ cmax usage --json | jq '.profiles[] | {name, five_hour_pct, seven_day_pct}'
+{"name":"personal","five_hour_pct":42.0,"seven_day_pct":71.5}
+{"name":"secondary","five_hour_pct":18.3,"seven_day_pct":34.0}
+```
+
 ## Features
 
 - **Smart picker, 3 tiers**: usage-aware (Anthropic `/api/oauth/usage`) → caam smart (local heuristic) → deterministic round-robin
