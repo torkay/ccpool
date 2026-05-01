@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+# debian/rules — uses dh-python for the standard pyproject build.
+
+export PYBUILD_NAME=cmaxctl
+export PYBUILD_SYSTEM=pyproject
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_install:
+	dh_auto_install
+	# Install the bash dispatcher under /usr/bin
+	install -D -m 0755 bin/cmax debian/cmaxctl/usr/bin/cmax

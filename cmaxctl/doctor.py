@@ -15,7 +15,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from cmaxctl import caam, config, paths, platform, secrets
+from cmaxctl import caam, config, paths, platform, providers, secrets
 
 BACKUP_DIR = Path.home() / ".claude" / "backups"
 BACKUP_GLOB = ".claude.json.backup.*"
@@ -101,6 +101,27 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
             "severity": "CRITICAL", "code": "no_caam",
             "message": "caam binary not found on PATH",
             "fix": "go install github.com/Dicklesworthstone/coding_agent_account_manager/cmd/caam@latest",
+        })
+        return findings
+
+    # Provider strategy gate — codex/gemini are recognised but not yet implemented
+    # in cmaxctl 1.0. Without this check, `cmax setup` would half-run and confuse.
+    pname = (cfg.provider.name or "claude").strip().lower()
+    if not providers.is_implemented(pname):
+        if pname in providers.SUPPORTED_PROVIDERS:
+            findings.append({
+                "severity": "HIGH", "code": "provider_not_implemented",
+                "message": (
+                    f"provider {pname!r} is recognised by caam but not yet "
+                    "implemented in cmaxctl 1.0"
+                ),
+                "fix": "set [provider] name = \"claude\" in config.toml; tracking issue label:provider",
+            })
+            return findings
+        findings.append({
+            "severity": "HIGH", "code": "provider_unknown",
+            "message": f"provider {pname!r} not recognised; supported: {providers.SUPPORTED_PROVIDERS}",
+            "fix": "set [provider] name = \"claude\" in config.toml",
         })
         return findings
 

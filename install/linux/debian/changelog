@@ -1,0 +1,6 @@
+cmaxctl (1.0.0-1) unstable; urgency=low
+
+  * Initial Debian packaging.
+  * Smart Claude Max account rotation; macOS + Linux first-class support.
+
+ -- cmaxctl contributors <noreply@cmaxctl.dev>  Tue, 28 Apr 2026 14:30:00 +1000
