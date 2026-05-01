@@ -275,8 +275,11 @@ def cmd_inventory(args: list[str]) -> int:
 def cmd_statusline(args: list[str]) -> int:
     cfg = config.load()
     s = statusline.snapshot(cfg)
-    if "--short" in args:
-        print(statusline.render_short(s))
+    short, color, fmt = statusline._parse_args(args)
+    if fmt is not None:
+        print(statusline.render_format(s, fmt))
+    elif short:
+        print(statusline.render_short(s, color=color))
     else:
         print(json.dumps(s))
     return 0

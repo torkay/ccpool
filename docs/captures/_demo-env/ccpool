@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Captured-demo shim. PATH-prepended by VHS tapes in docs/captures/*.tape so
+# recordings produce deterministic output without depending on real OAuth state.
+# Real CLI lives at ccpool/cli.py — this file is recordings-only.
+set -euo pipefail
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  statusline)
+    fmt=""; short=0; nocolor=0
+    for a in "$@"; do
+      case "$a" in
+        --short) short=1 ;;
+        --no-color) short=1; nocolor=1 ;;
+        --format=*) fmt="${a#--format=}" ;;
+      esac
+    done
+    if [[ -n "$fmt" ]]; then
+      out="$fmt"
+      out="${out//\{emoji\}/🟢}"
+      out="${out//\{marker\}/OK}"
+      out="${out//\{profile\}/personal}"
+      out="${out//\{five\}/42%}"
+      out="${out//\{seven\}/72%}"
+      out="${out//\{saturated\}/no}"
+      out="${out//\{degraded\}/no}"
+      printf '%s\n' "$out"
+    elif (( short )); then
+      if (( nocolor )); then
+        printf 'OK personal 42%% / 71%%\n'
+      else
+        printf '🟢 personal 42%% / 71%%\n'
+      fi
+    else
+      printf '{"version":1,"profile":"personal","five_hour_pct":42.0,"seven_day_pct":71.5,"saturated":false,"degraded":false,"emoji":"🟢"}\n'
+    fi
+    ;;
+
+  usage)
+    cat <<'EOF'
+PROFILE     PLAN      5-HOUR              7-DAY               RESETS IN  STATUS
+personal    max-20x   ▰▰▰▰▰▱▱▱▱▱ 42%      ▰▰▰▰▰▰▰▱▱▱ 71%      2h 47m     healthy
+secondary   max-20x   ▰▰▱▱▱▱▱▱▱▱ 18%      ▰▰▰▱▱▱▱▱▱▱ 34%      4h 12m     healthy
+work-pro    pro       ▰▰▰▰▰▰▰▰▰▱ 91%      ▰▰▰▰▰▰▰▰▱▱ 78%      1h 03m     cooling
+
+selection: usage-aware → secondary (lowest 5h)
+degraded: false · saturated: false · cache: 4s ago
+EOF
+    ;;
+
+  setup)
+    cat <<'EOF'
+═══════════════════════════════════════════════════════════════════
+  ccpool setup
+═══════════════════════════════════════════════════════════════════
+Wires up Anthropic account rotation for the claude CLI.
+
+EOF
+    sleep 0.4
+    printf '  Profile 1 name: '
+    sleep 0.5; printf 'personal\n'
+    printf '  Profile 1 email: '
+    sleep 0.6; printf 'you@example.com\n'
+    sleep 0.3
+    printf '  → opening Claude sign-in. Use account: you@example.com\n'
+    sleep 0.7
+    printf '  ✓ signed in (account verified)\n'
+    sleep 0.3
+    printf '  → Issuing long-lived token for you@example.com\n'
+    sleep 0.5
+    printf '  ✓ token stored (keychain)\n\n'
+
+    printf '  Profile 2 name: '
+    sleep 0.4; printf 'secondary\n'
+    printf '  Profile 2 email: '
+    sleep 0.5; printf 'you+work@example.com\n'
+    sleep 0.4
+    printf '  ✓ signed in · ✓ token stored (keychain)\n\n'
+
+    sleep 0.3
+    cat <<'EOF'
+Automation
+  ✓ rotation watcher
+  ✓ daily watchdog
+  ✓ shell-rc managed-block written
+
+All set. From a new terminal, just type:  ccpool
+EOF
+    ;;
+
+  *)
+    printf 'ccpool: unknown subcommand %s\n' "$cmd" >&2
+    exit 1
+    ;;
+esac

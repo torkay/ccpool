@@ -1,6 +1,12 @@
 # Shell prompt integrations
 
-`ccpool statusline` emits a one-line JSON snapshot of the current profile, utilization, and saturation/degraded flags — designed for shell prompt frameworks. `ccpool statusline --short` emits a single-line text rendering (emoji + profile + percentages) suitable for direct interpolation.
+`ccpool statusline` emits a one-line JSON snapshot of the current profile, utilisation, and saturation/degraded flags, designed for shell prompt frameworks. Three text modes are also available:
+
+- `ccpool statusline --short` — emoji + profile + 5h/7d percentages, e.g. `🟢 personal 42% / 71%`
+- `ccpool statusline --no-color` — same shape but with ascii markers (`OK`, `WARN`, `SAT`, `DEG`) instead of emoji, for prompts and pagers that mangle unicode
+- `ccpool statusline --format='{marker} {profile} {five}/{seven}'` — user-supplied template; placeholders below
+
+Format placeholders: `{emoji}` `{marker}` `{profile}` `{five}` `{seven}` `{saturated}` `{degraded}`. `{five}` and `{seven}` render as `42%` or `—` when the usage endpoint is unreachable. `{saturated}` and `{degraded}` render as `yes` or `no`.
 
 ## JSON shape
 

@@ -1,47 +1,39 @@
 # ccpool
 
-> Smart Claude Max account rotation. Zero daemons. Zero lock-in.
+`ccpool` is an account-rotation wrapper for Anthropic's `claude` CLI.
 
-`ccpool` (binary: `ccpool`) routes your `claude` invocations across multiple Claude Max accounts so you never hit the per-account 5-hour or 7-day cap. It uses Anthropic's own `/api/oauth/usage` endpoint as ground truth and falls back to local heuristics when the endpoint is unreachable.
+It targets users running multiple Anthropic subscriptions (any combination of Pro, Max, and Team) and picks which account to use per `claude` invocation, based on real-time usage data from Anthropic's `/api/oauth/usage` endpoint. Selection is tiered: usage-aware first, [`caam`](https://github.com/Dicklesworthstone/coding_agent_account_manager)'s local heuristic if the endpoint is unreachable, deterministic round-robin if both fail.
 
-Built on top of [`caam`](https://github.com/Dicklesworthstone/coding_agent_account_manager) for per-account isolation. No background daemons; runs as a launchd / systemd-user interval job.
+No background daemons. Ticks via launchd interval (macOS) or systemd-user timer (Linux), with a crontab fallback. Built on top of `caam` for per-account isolation; doesn't replace it.
 
-## Status
+![statusline modes](docs/img/statusline.gif)
 
-**Pre-1.0.** API and config schema may change. v1.0.0 ships when the test matrix is green on macos-13/14 and ubuntu-22/24.
-
-## Install (preview)
+## Install
 
 ```bash
-# Homebrew (macOS, recommended)
+# Homebrew (macOS)
 brew tap torkay/ccpool
 brew install ccpool
 
-# pipx (Linux + macOS)
+# pipx (macOS + Linux)
 pipx install ccpool
 
-# curl-bash one-liner
+# curl-bash
 curl -fsSL https://raw.githubusercontent.com/torkay/ccpool/main/install/install.sh | bash
 ```
 
-After install:
+`caam` must be on `$PATH` first (`brew install dicklesworthstone/tap/caam` or `go install github.com/Dicklesworthstone/coding_agent_account_manager/cmd/caam@latest`).
 
-```bash
-ccpool setup    # interactive bootstrap; asks for accounts, opens browser for OAuth
-ccpool usage    # live ground-truth utilization
-ccpool doctor   # health check
+## Configure
+
+`ccpool setup` registers profiles. Each one gets its own `caam`-isolated home and its own long-lived OAuth token. Tokens land in the platform keychain (macOS Keychain, Linux libsecret) or in a `tokens.env` 0600 file as fallback.
+
 ```
-
-Day-to-day, `ccpool setup` aliases `claude` → `ccpool` so you keep your muscle memory.
-
-## 30-second demo
-
-```bash
 $ ccpool setup
 ═══════════════════════════════════════════════════════════════════
   ccpool setup
 ═══════════════════════════════════════════════════════════════════
-Wires up smart Claude Max account rotation.
+Wires up Anthropic account rotation for the claude CLI.
 
   Profile 1 name: personal
   Profile 1 email: you@example.com
@@ -60,42 +52,64 @@ Automation
   ✓ shell-rc managed-block written
 
 All set. From a new terminal, just type:  ccpool
+```
 
+Once set up, `claude` is shadowed by `ccpool` in your shell-rc. Existing scripts and `claude ...` invocations route through the picker without changes.
+
+## Picker
+
+Three tiers, ordered:
+
+1. **Usage-aware.** `/api/oauth/usage` is queried per profile (Anthropic caches the response for 5 min). The profile with the lowest combined 5-hour and 7-day utilisation is selected.
+2. **`caam` local.** If the usage endpoint is unreachable, fall back to `caam`'s heuristic (token age, request counts, recent failures).
+3. **Round-robin.** Last resort. Deterministic, never blocks.
+
+Hard saturation guard: if every profile is above `picker.hard_threshold_pct` (default 95) on either window, ccpool refuses to spawn rather than letting a request 429 mid-turn. State is exposed via `ccpool usage` and `ccpool statusline`.
+
+![usage table](docs/img/usage.gif)
+
+## Statusline
+
+`ccpool statusline` emits one-line JSON for prompt integration. Three text variants:
+
+```
 $ ccpool statusline --short
 🟢 personal 42% / 71%
 
-$ ccpool usage --json | jq '.profiles[] | {name, five_hour_pct, seven_day_pct}'
-{"name":"personal","five_hour_pct":42.0,"seven_day_pct":71.5}
-{"name":"secondary","five_hour_pct":18.3,"seven_day_pct":34.0}
+$ ccpool statusline --no-color
+OK personal 42% / 71%
+
+$ ccpool statusline --format='{marker} {profile} {five}/{seven}'
+OK personal 42%/72%
 ```
 
-## Features
+Format placeholders: `{emoji}` `{marker}` `{profile}` `{five}` `{seven}` `{saturated}` `{degraded}`. See [docs/integrations.md](docs/integrations.md) for Starship, p10k, oh-my-zsh, tmux, and bash recipes.
 
-- **Smart picker, 3 tiers**: usage-aware (Anthropic `/api/oauth/usage`) → caam smart (local heuristic) → deterministic round-robin
-- **Hard saturation guard**: refuses to spawn when *all* accounts cross 95% rather than letting requests 429
-- **Token rotation**: long-lived OAuth tokens via `claude setup-token`, age-tracked; `ccpool rotate` re-issues
-- **Storage abstraction**: macOS Keychain / libsecret / `tokens.env` 0600 fallback — works around Apple keychain ACL bug #20553
-- **Doctor with auto-fix**: severity-rated findings, idempotent fixes for common breakage
-- **Status line for prompts**: `ccpool statusline` emits one-line JSON for Starship / p10k / oh-my-zsh
-- **No daemons**: tick-only via launchd interval job (macOS) or systemd-user timer (Linux); crontab fallback
+## Token storage
 
-## Why?
+Pluggable. Default backend is the platform keychain (`security` on macOS, `secret-tool` via libsecret on Linux). The `tokens.env` 0600 file fallback exists because of Apple Keychain ACL bug #20553, which makes namespaced credentials lose readability after a reboot. Set `CCPOOL_FORCE_ENV_STORAGE=1` to skip the keychain entirely.
 
-If you've got two Claude Max subscriptions you're already paying for, you're throwing away half your inference budget when one account caps out and the other sits idle. `ccpool` keeps them balanced.
+Tokens are issued by Claude itself (`claude setup-token`) and rotate on a watchdog cadence; profile names and email addresses stay local.
+
+## Status
+
+Pre-1.0. The CLI surface and config schema may still shift. v1.0.0 ships when the matrix is green on macOS 13/14 and Ubuntu 22/24.
 
 ## Documentation
 
-- [INSTALL.md](docs/INSTALL.md) — every install path with verify steps
-- [REFERENCE.md](docs/REFERENCE.md) — every subcommand and config key
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — module roles and decision rationale
-- [THREAT_MODEL.md](docs/THREAT_MODEL.md) — security stance, what's in/out of scope
-- [PROVIDERS.md](docs/PROVIDERS.md) — claude (full), codex/gemini (planned)
-- [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — symptoms → fixes
-- [COMPATIBILITY.md](docs/COMPATIBILITY.md) — version matrix
+- [INSTALL.md](docs/INSTALL.md), every install path with verify steps
+- [REFERENCE.md](docs/REFERENCE.md), every subcommand and config key
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md), module roles and decisions
+- [THREAT_MODEL.md](docs/THREAT_MODEL.md), security stance, what's in and out of scope
+- [PROVIDERS.md](docs/PROVIDERS.md), Anthropic via `claude` (full); `codex` and `gemini` planned
+- [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md), symptoms to fixes
+- [COMPATIBILITY.md](docs/COMPATIBILITY.md), version matrix
+- [docs/integrations.md](docs/integrations.md), shell prompt recipes
+- [docs/captures/](docs/captures/), VHS tape files for higher-fidelity terminal recordings
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
 
 ## Contributing
 
