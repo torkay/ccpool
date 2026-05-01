@@ -1,4 +1,4 @@
-"""cmaxctl/usage.py — Anthropic /api/oauth/usage client.
+"""ccpool/usage.py — Anthropic /api/oauth/usage client.
 
 Reads the per-profile access token (provisioned by `caam login`/`claude auth login`),
 hits the undocumented endpoint, returns parsed Usage. ADR-0007 documents the
@@ -20,12 +20,12 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from cmaxctl import caam, config, paths
+from ccpool import caam, config, paths
 
 CACHE_TTL_S = 5
 ENDPOINT = "https://api.anthropic.com/api/oauth/usage"
 BETA_HEADER = "oauth-2025-04-20"
-USER_AGENT = f"cmaxctl/{__import__('cmaxctl')._version.__version__}"
+USER_AGENT = f"ccpool/{__import__('ccpool')._version.__version__}"
 HTTP_TIMEOUT = 5.0
 
 
@@ -262,7 +262,7 @@ def _cli_all(args: list[str]) -> int:
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("usage: python -m cmaxctl.usage {fetch [profile] | all <profile1> ...} [--force]",
+        print("usage: python -m ccpool.usage {fetch [profile] | all <profile1> ...} [--force]",
               file=sys.stderr)
         return 2
     cmd, *args = sys.argv[1:]

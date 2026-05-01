@@ -18,9 +18,9 @@ Long-lived OAuth tokens (`sk-ant-oat01-…`) need somewhere to live across reboo
 **Keychain preferred, `.env` fallback, transparent.**
 
 - Write attempts keychain first.
-- On keychain failure (any cause), fall through to `~/.local/share/cmaxctl/tokens.env` mode 0600.
+- On keychain failure (any cause), fall through to `~/.local/share/ccpool/tokens.env` mode 0600.
 - Read attempts `.env` first (so a deliberate fallback wins over a stale keychain entry), then keychain.
-- Operator can force `.env`-only via `CAAM_FORCE_ENV_STORAGE=1` (legacy var name preserved for now; alias `CMAXCTL_FORCE_ENV_STORAGE=1` added).
+- Operator can force `.env`-only via `CAAM_FORCE_ENV_STORAGE=1` (legacy var name preserved for now; alias `CCPOOL_FORCE_ENV_STORAGE=1` added).
 
 ## Why this ordering
 
@@ -39,6 +39,6 @@ Long-lived OAuth tokens (`sk-ant-oat01-…`) need somewhere to live across reboo
 
 ## Consequences
 
-- `cmax doctor` exposes both backends and surfaces drift between them.
-- `cmax rotate` writes to whichever backend the previous token used (defaulting keychain).
-- The keychain service prefix is `cmaxctl-token-` (was `caam-claude-token-` in v0); `migrate.py` rewrites old entries.
+- `ccpool doctor` exposes both backends and surfaces drift between them.
+- `ccpool rotate` writes to whichever backend the previous token used (defaulting keychain).
+- The keychain service prefix is `ccpool-token-` (was `caam-claude-token-` in v0); `migrate.py` rewrites old entries.

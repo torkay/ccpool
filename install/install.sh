@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# install.sh — curl-bash one-liner for cmaxctl.
+# install.sh — curl-bash one-liner for ccpool.
 #
-#   curl -fsSL https://raw.githubusercontent.com/torkay/cmaxctl/main/install/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/torkay/ccpool/main/install/install.sh | bash
 #
 # Idempotent. Re-running picks up where the last attempt stopped.
 # Per plan §10. POSIX-shell-friendly enough that bash 3.2 (macOS default)
@@ -16,7 +16,7 @@ PYTHON_MIN_MAJOR=3
 PYTHON_MIN_MINOR=11
 CAAM_INSTALL_HINT='go install github.com/Dicklesworthstone/coding_agent_account_manager/cmd/caam@latest'
 CLAUDE_INSTALL_HINT='https://docs.claude.com/en/docs/claude-code/setup'
-PYPI_PACKAGE='cmaxctl'
+PYPI_PACKAGE='ccpool'
 
 # ─────────────────────────────────────────────────────────────────────
 # Output helpers (no-color when not a TTY)
@@ -40,7 +40,7 @@ step "Detecting OS"
 case "$(uname -s)" in
   Darwin) OS=macos ;;
   Linux)  OS=linux ;;
-  *)      die "unsupported OS: $(uname -s). cmaxctl supports macOS + Linux only." ;;
+  *)      die "unsupported OS: $(uname -s). ccpool supports macOS + Linux only." ;;
 esac
 ok "OS: ${OS}"
 
@@ -87,7 +87,7 @@ step "Verifying caam binary"
 if ! command -v caam >/dev/null 2>&1; then
   warn "caam not found on PATH"
   printf '  Install caam first:\n  %s\n\n' "${CAAM_INSTALL_HINT}" >&2
-  die "cmaxctl requires caam (per ADR-0006). Install caam, then re-run."
+  die "ccpool requires caam (per ADR-0006). Install caam, then re-run."
 fi
 ok "caam: $(command -v caam)"
 
@@ -98,23 +98,23 @@ step "Verifying claude binary"
 if ! command -v claude >/dev/null 2>&1; then
   warn "claude binary not found on PATH"
   printf '  Install claude: %s\n\n' "${CLAUDE_INSTALL_HINT}" >&2
-  warn "continuing without claude — cmaxctl install will succeed but you'll need to install claude before running cmax."
+  warn "continuing without claude — ccpool install will succeed but you'll need to install claude before running ccpool."
 else
   ok "claude: $(command -v claude)"
 fi
 
 # ─────────────────────────────────────────────────────────────────────
-# Step 6 — Install cmaxctl
+# Step 6 — Install ccpool
 # ─────────────────────────────────────────────────────────────────────
 step "Installing ${PYPI_PACKAGE}"
 case "${PKG_MGR}" in
   brew)
-    if brew list --formula | grep -q "^cmaxctl$"; then
-      brew upgrade cmaxctl || true
+    if brew list --formula | grep -q "^ccpool$"; then
+      brew upgrade ccpool || true
     else
-      # Tap is published at torkay/cmaxctl (see docs/INSTALL.md)
-      brew tap torkay/cmaxctl 2>/dev/null || true
-      brew install cmaxctl
+      # Tap is published at torkay/ccpool (see docs/INSTALL.md)
+      brew tap torkay/ccpool 2>/dev/null || true
+      brew install ccpool
     fi
     ;;
   pipx)
@@ -134,15 +134,15 @@ ok "${PYPI_PACKAGE} installed"
 # ─────────────────────────────────────────────────────────────────────
 # Step 7 — Run doctor (warn-only; we don't fail install on findings)
 # ─────────────────────────────────────────────────────────────────────
-step "Running cmax doctor"
-if command -v cmax >/dev/null 2>&1; then
-  if cmax doctor --json >/dev/null 2>&1; then
+step "Running ccpool doctor"
+if command -v ccpool >/dev/null 2>&1; then
+  if ccpool doctor --json >/dev/null 2>&1; then
     ok "doctor: clean"
   else
-    warn "doctor surfaced findings — run 'cmax doctor' for details"
+    warn "doctor surfaced findings — run 'ccpool doctor' for details"
   fi
 else
-  warn "cmax is not on PATH yet. You may need to add ~/.local/bin to PATH or open a new shell."
+  warn "ccpool is not on PATH yet. You may need to add ~/.local/bin to PATH or open a new shell."
 fi
 
 # ─────────────────────────────────────────────────────────────────────
@@ -150,8 +150,8 @@ fi
 # ─────────────────────────────────────────────────────────────────────
 echo
 printf '%sAll set.%s Next:\n\n' "${BOLD}${GREEN}" "${RESET}"
-echo "  cmax setup       interactive: link your Claude Max accounts"
-echo "  cmax status      health snapshot"
-echo "  cmax usage       live utilization"
+echo "  ccpool setup       interactive: link your Claude Max accounts"
+echo "  ccpool status      health snapshot"
+echo "  ccpool usage       live utilization"
 echo
-echo "Docs: https://github.com/torkay/cmaxctl/tree/main/docs"
+echo "Docs: https://github.com/torkay/ccpool/tree/main/docs"

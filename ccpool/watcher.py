@@ -1,4 +1,4 @@
-"""cmaxctl/watcher.py — proactive rotation tick.
+"""ccpool/watcher.py — proactive rotation tick.
 
 Runs as a launchd StartInterval / systemd-user timer (default 300s). No daemon,
 no threads. Each fire takes ~50ms locally; network only every Nth cycle.
@@ -19,7 +19,7 @@ import sys
 import time
 from typing import Any
 
-from cmaxctl import caam, config, notify, paths
+from ccpool import caam, config, notify, paths
 
 HEALTHY = {"healthy", "ok"}
 
@@ -160,9 +160,9 @@ def tick(cfg: config.Config | None = None) -> int:
               networked=use_network)
         notify.fire(
             severity="info" if "info" in cfg.notify.severities else "high",
-            title=f"cmaxctl: rotated {active} → {rec_name}",
+            title=f"ccpool: rotated {active} → {rec_name}",
             message=f"fire #{fire_n}, networked={use_network}",
-            type_="cmaxctl-watcher",
+            type_="ccpool-watcher",
             cfg=cfg,
         )
     else:

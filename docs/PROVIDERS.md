@@ -1,6 +1,6 @@
 # Providers
 
-cmaxctl is designed around `caam`'s multi-provider support, which already covers `claude`, `codex`, and `gemini`. At v1.0, cmaxctl ships **claude full support + codex/gemini stubs**.
+ccpool is designed around `caam`'s multi-provider support, which already covers `claude`, `codex`, and `gemini`. At v1.0, ccpool ships **claude full support + codex/gemini stubs**.
 
 ## Status matrix
 
@@ -12,7 +12,7 @@ cmaxctl is designed around `caam`'s multi-provider support, which already covers
 
 ## Why claude only at v1
 
-caam upstream supports all three providers, but cmaxctl needs to know per-provider:
+caam upstream supports all three providers, but ccpool needs to know per-provider:
 
 - **OAuth login flow shape** — flag names, prompts, browser-vs-headless paths.
 - **Long-lived token issuance** — the equivalent of `claude setup-token`.
@@ -24,11 +24,11 @@ Of these, only the claude surface is documented enough today (and we treat it as
 
 ## What the stubs actually do
 
-Setting `cfg.provider.name = "codex"` (or `"gemini"`) causes cmaxctl to:
+Setting `cfg.provider.name = "codex"` (or `"gemini"`) causes ccpool to:
 
-1. **`cmax setup`**: refuses with a clear error pointing at the tracking issue.
-2. **`cmax pick` / default mode**: passes through to `caam run codex --precheck …` so caam handles whatever it can natively. cmaxctl's usage-aware tier is skipped (no endpoint client).
-3. **`cmax doctor`**: reports `provider_not_implemented` (HIGH) until a real implementation lands.
+1. **`ccpool setup`**: refuses with a clear error pointing at the tracking issue.
+2. **`ccpool pick` / default mode**: passes through to `caam run codex --precheck …` so caam handles whatever it can natively. ccpool's usage-aware tier is skipped (no endpoint client).
+3. **`ccpool doctor`**: reports `provider_not_implemented` (HIGH) until a real implementation lands.
 
 Setting `cfg.provider.name = "claude"` (default) is the only path that exercises every code path.
 
@@ -52,8 +52,8 @@ A single contributor familiar with the target provider should be able to ship on
 
 The skeleton:
 
-1. **Add a strategy table entry.** `cmaxctl/providers/<name>.py` exports `LOGIN`, `TOKEN_ISSUE`, `USAGE_FETCH`, `IDENTITY_MARKER` callables that follow the same shape as the claude implementation.
-2. **Wire the dispatch.** `cmaxctl/cli.py` and `bin/cmax` already discriminate on `cfg.provider.name`; just add a branch.
+1. **Add a strategy table entry.** `ccpool/providers/<name>.py` exports `LOGIN`, `TOKEN_ISSUE`, `USAGE_FETCH`, `IDENTITY_MARKER` callables that follow the same shape as the claude implementation.
+2. **Wire the dispatch.** `ccpool/cli.py` and `bin/ccpool` already discriminate on `cfg.provider.name`; just add a branch.
 3. **Add a mock binary.** `tests/fixtures/bin/<provider>` with the same env-driven control surface as the claude mock.
 4. **Add bats + pytest coverage.** Existing tests can be parametrised.
 5. **Document.** Add a section to this file; add an ADR if the provider forces a non-obvious decision.
@@ -65,7 +65,7 @@ The skeleton:
 | codex | TBD (file on first user request) | not yet filed |
 | gemini | TBD | not yet filed |
 
-When you file the tracking issue, link it from this file and from `cmaxctl/providers/<name>.py` so the stub error message can point users at it.
+When you file the tracking issue, link it from this file and from `ccpool/providers/<name>.py` so the stub error message can point users at it.
 
 ## See also
 

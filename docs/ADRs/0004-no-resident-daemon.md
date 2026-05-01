@@ -10,11 +10,11 @@ The personal substrate this evolved from instead uses a launchd interval job tha
 
 ## Decision
 
-cmaxctl has **no resident daemon process**.
+ccpool has **no resident daemon process**.
 
 - Rotation watcher = launchd `StartInterval` job (macOS) / systemd-user `OnUnitInactiveSec` timer (Linux) / crontab fallback. Each fire executes a Python module, exits, leaves no resident process.
 - Daily watchdog = same model, fires once per day.
-- Picker (`cmax pick`) is invoked synchronously by the bash dispatcher; no IPC.
+- Picker (`ccpool pick`) is invoked synchronously by the bash dispatcher; no IPC.
 
 ## Why
 
@@ -29,8 +29,8 @@ cmaxctl has **no resident daemon process**.
 
 ## Consequences
 
-- All state goes through the filesystem (`~/.local/share/cmaxctl/`). That's also our integration contract: any tool that reads those files sees authoritative state.
-- No bg-process kill/restart UX. `cmax disable` / `cmax enable` toggles a flag file; next tick honours it.
+- All state goes through the filesystem (`~/.local/share/ccpool/`). That's also our integration contract: any tool that reads those files sees authoritative state.
+- No bg-process kill/restart UX. `ccpool disable` / `ccpool enable` toggles a flag file; next tick honours it.
 - Inter-tick state (e.g. "I just rotated, anti-flap for 10 minutes") goes through `watcher.last_rotate` mtime — no inter-process coordination needed.
 
 ## Out of scope

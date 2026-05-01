@@ -1,7 +1,7 @@
-"""Integration: cmaxctl runs degraded but functional with no caam, no claude.
+"""Integration: ccpool runs degraded but functional with no caam, no claude.
 
 Covers Phase 2 acceptance gate for Linux container CI: when nothing is
-installed except python+cmaxctl, the CLI still:
+installed except python+ccpool, the CLI still:
 
   * `statusline`   → emits valid JSON, no crash
   * `migrate detect` → reports detected=False on a fresh container
@@ -22,14 +22,14 @@ from pathlib import Path
 
 
 def _run(monkeypatch, *args, expected_rc=None):
-    """Invoke `python -m cmaxctl.cli <args>` with the conftest-isolated $HOME."""
+    """Invoke `python -m ccpool.cli <args>` with the conftest-isolated $HOME."""
     repo = Path(__file__).resolve().parents[2]
     env = os.environ.copy()
     env["PYTHONPATH"] = str(repo)
     # Force PATH to a deterministic minimum so caam + claude are both absent.
     env["PATH"] = "/usr/bin:/bin"
     proc = subprocess.run(
-        [sys.executable, "-m", "cmaxctl.cli", *args],
+        [sys.executable, "-m", "ccpool.cli", *args],
         capture_output=True, text=True, env=env, timeout=15,
     )
     if expected_rc is not None:
@@ -91,7 +91,7 @@ def test_inventory_emits_json_snapshot(monkeypatch):
     assert "profiles" in payload or "profile_summary" in payload or "storage" in payload
 
 
-def test_version_prints_cmaxctl_version(monkeypatch):
+def test_version_prints_ccpool_version(monkeypatch):
     proc = _run(monkeypatch, "version")
     assert proc.returncode == 0, proc.stderr
-    assert "cmaxctl" in proc.stdout.lower()
+    assert "ccpool" in proc.stdout.lower()

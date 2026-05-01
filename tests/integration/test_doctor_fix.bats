@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# `cmax doctor` finding surface and `--fix` autofix paths.
+# `ccpool doctor` finding surface and `--fix` autofix paths.
 #
 # These tests exercise the doctor's output shape against several seeded
 # states (empty config, healthy config, missing creds). We don't assert
@@ -9,16 +9,16 @@
 load 'test_helper'
 
 setup() {
-  cmax_setup_env
+  ccpool_setup_env
 }
 
 teardown() {
-  cmax_teardown_env
+  ccpool_teardown_env
 }
 
 @test "doctor reports caam-related finding when binary missing from PATH" {
   export PATH="/usr/bin:/bin"
-  run "${CMAX}" doctor --json
+  run "${CCPOOL}" doctor --json
   python3 -c "
 import json
 d = json.loads('''${output}''')
@@ -31,7 +31,7 @@ assert hit, f'no caam finding in: {sorted(codes)}'
 }
 
 @test "doctor JSON is empty-array safe even on a fully-default install" {
-  run "${CMAX}" doctor --json
+  run "${CCPOOL}" doctor --json
   python3 -c "
 import json
 d = json.loads('''${output}''')
@@ -43,12 +43,12 @@ for f in d['findings']:
 }
 
 @test "doctor with seeded config shows fewer config findings" {
-  cmax_seed_config
-  cmax_seed_caam_profile alpha
-  cmax_seed_caam_profile beta
-  cmax_seed_token alpha
-  cmax_seed_token beta
-  run "${CMAX}" doctor --json
+  ccpool_seed_config
+  ccpool_seed_caam_profile alpha
+  ccpool_seed_caam_profile beta
+  ccpool_seed_token alpha
+  ccpool_seed_token beta
+  run "${CCPOOL}" doctor --json
   python3 -c "
 import json
 d = json.loads('''${output}''')
@@ -59,14 +59,14 @@ assert not any('no_config' in c for c in codes), f'no_config still present: {cod
 }
 
 @test "doctor --fix is idempotent (second run ≤ first)" {
-  cmax_seed_config
-  run "${CMAX}" doctor --fix --json
+  ccpool_seed_config
+  run "${CCPOOL}" doctor --fix --json
   first_count=$(python3 -c "
 import json
 d = json.loads('''${output}''')
 print(len(d.get('findings', [])))
 ")
-  run "${CMAX}" doctor --fix --json
+  run "${CCPOOL}" doctor --fix --json
   second_count=$(python3 -c "
 import json
 d = json.loads('''${output}''')

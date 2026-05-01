@@ -1,4 +1,4 @@
-"""cmaxctl/notify.py — optional notify-hook abstraction.
+"""ccpool/notify.py — optional notify-hook abstraction.
 
 Replaces the personal-substrate `notify_dispatch.py` Telegram dependency.
 The hook is platform-neutral: a list-form command (no shell interpolation)
@@ -15,11 +15,11 @@ import json
 import subprocess
 from typing import Any
 
-from cmaxctl import config
+from ccpool import config
 
 
 def fire(severity: str, title: str, message: str,
-         type_: str = "cmaxctl",
+         type_: str = "ccpool",
          extra: dict[str, Any] | None = None,
          cfg: config.Config | None = None) -> bool:
     """Best-effort notification. Returns True if a notify command was invoked."""
@@ -59,4 +59,4 @@ def fire(severity: str, title: str, message: str,
 def fire_simple(severity: str, message: str,
                 cfg: config.Config | None = None) -> bool:
     """Convenience wrapper for ad-hoc notifications."""
-    return fire(severity=severity, title="cmaxctl", message=message, cfg=cfg)
+    return fire(severity=severity, title="ccpool", message=message, cfg=cfg)

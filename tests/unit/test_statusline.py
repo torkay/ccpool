@@ -1,4 +1,4 @@
-"""Unit tests for cmaxctl.statusline — no-binary degraded path + emoji policy."""
+"""Unit tests for ccpool.statusline — no-binary degraded path + emoji policy."""
 from __future__ import annotations
 
 import json
@@ -7,11 +7,11 @@ import sys
 
 def _fresh():
     for mod in (
-        "cmaxctl.paths", "cmaxctl.config", "cmaxctl.caam",
-        "cmaxctl.usage", "cmaxctl.statusline",
+        "ccpool.paths", "ccpool.config", "ccpool.caam",
+        "ccpool.usage", "ccpool.statusline",
     ):
         sys.modules.pop(mod, None)
-    from cmaxctl import config, statusline
+    from ccpool import config, statusline
     return config, statusline
 
 

@@ -1,13 +1,13 @@
-"""Unit tests for cmaxctl.config — schema, validation, round-trip."""
+"""Unit tests for ccpool.config — schema, validation, round-trip."""
 from __future__ import annotations
 
 import sys
 
 
 def _fresh():
-    for mod in ("cmaxctl.paths", "cmaxctl.config"):
+    for mod in ("ccpool.paths", "ccpool.config"):
         sys.modules.pop(mod, None)
-    from cmaxctl import config
+    from ccpool import config
     return config
 
 

@@ -3,13 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cmaxctl"
+name = "ccpool"
 dynamic = ["version"]
 description = "Smart Claude Max account rotation. Zero daemons. Zero lock-in."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
-authors = [{ name = "cmaxctl contributors" }]
+authors = [{ name = "ccpool contributors" }]
 keywords = ["claude", "anthropic", "oauth", "account-rotation", "claude-code"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -27,13 +27,13 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage      = "https://github.com/torkay/cmaxctl"
-Documentation = "https://github.com/torkay/cmaxctl#readme"
-Issues        = "https://github.com/torkay/cmaxctl/issues"
-Changelog     = "https://github.com/torkay/cmaxctl/blob/main/CHANGELOG.md"
+Homepage      = "https://github.com/torkay/ccpool"
+Documentation = "https://github.com/torkay/ccpool#readme"
+Issues        = "https://github.com/torkay/ccpool/issues"
+Changelog     = "https://github.com/torkay/ccpool/blob/main/CHANGELOG.md"
 
 [project.scripts]
-cmaxctl = "cmaxctl.cli:main"
+ccpool = "ccpool.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -45,13 +45,13 @@ dev = [
 ]
 
 [tool.setuptools.dynamic]
-version = { attr = "cmaxctl._version.__version__" }
+version = { attr = "ccpool._version.__version__" }
 
 [tool.setuptools.packages.find]
-include = ["cmaxctl*"]
+include = ["ccpool*"]
 
 [tool.setuptools.package-data]
-cmaxctl = ["templates/**/*"]
+ccpool = ["templates/**/*"]
 
 [tool.ruff]
 line-length = 100

@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 # debian/rules — uses dh-python for the standard pyproject build.
 
-export PYBUILD_NAME=cmaxctl
+export PYBUILD_NAME=ccpool
 export PYBUILD_SYSTEM=pyproject
 
 %:
@@ -10,4 +10,4 @@ export PYBUILD_SYSTEM=pyproject
 override_dh_auto_install:
 	dh_auto_install
 	# Install the bash dispatcher under /usr/bin
-	install -D -m 0755 bin/cmax debian/cmaxctl/usr/bin/cmax
+	install -D -m 0755 bin/ccpool debian/ccpool/usr/bin/ccpool

@@ -21,7 +21,7 @@ Date: 2026-04-27 · Status: accepted
 
 ## Compatibility surface
 
-cmaxctl's only contact with caam is via specific CLI commands. We pin the CLI shape:
+ccpool's only contact with caam is via specific CLI commands. We pin the CLI shape:
 
 | Command | Used for |
 |---|---|

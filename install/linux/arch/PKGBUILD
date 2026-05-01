@@ -1,14 +1,14 @@
-# Maintainer: cmaxctl contributors <noreply@cmaxctl.dev>
+# Maintainer: ccpool contributors <noreply@ccpool.dev>
 # Submitted to AUR after first stable release. Until then, use the
-# `pipx install cmaxctl` path or build from source via `makepkg -si`
+# `pipx install ccpool` path or build from source via `makepkg -si`
 # in this directory.
 
-pkgname=cmaxctl
+pkgname=ccpool
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="Smart Claude Max account rotation. Zero daemons. Zero lock-in."
 arch=('any')
-url="https://github.com/torkay/cmaxctl"
+url="https://github.com/torkay/ccpool"
 license=('MIT')
 depends=(
   'python>=3.11'
@@ -25,7 +25,7 @@ makedepends=(
   'python-installer'
   'python-setuptools'
 )
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/torkay/cmaxctl/archive/refs/tags/v${pkgver}.tar.gz")
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/torkay/ccpool/archive/refs/tags/v${pkgver}.tar.gz")
 sha256sums=('SKIP')  # set on first release
 
 build() {
@@ -36,7 +36,7 @@ build() {
 package() {
   cd "${pkgname}-${pkgver}"
   python -m installer --destdir="${pkgdir}" dist/*.whl
-  install -Dm755 bin/cmax "${pkgdir}/usr/bin/cmax"
+  install -Dm755 bin/ccpool "${pkgdir}/usr/bin/ccpool"
   install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
   install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
 }

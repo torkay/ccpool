@@ -4,11 +4,11 @@ Date: 2026-04-27 · Status: accepted
 
 ## Context
 
-A natural feature request: "if account A starts a turn, and during that turn it crosses 95%, migrate the in-flight turn to account B so it completes." This is **not** what cmaxctl does, and not what it can do.
+A natural feature request: "if account A starts a turn, and during that turn it crosses 95%, migrate the in-flight turn to account B so it completes." This is **not** what ccpool does, and not what it can do.
 
 ## Decision
 
-cmaxctl rotates **at spawn boundaries only**. Once a `claude` process starts, the OAuth token used for that session is fixed for the lifetime of that process. If the active account caps mid-turn, that turn 429s.
+ccpool rotates **at spawn boundaries only**. Once a `claude` process starts, the OAuth token used for that session is fixed for the lifetime of that process. If the active account caps mid-turn, that turn 429s.
 
 ## Why we can't do mid-turn rotation
 
@@ -27,7 +27,7 @@ cmaxctl rotates **at spawn boundaries only**. Once a `claude` process starts, th
 ## What this means for users
 
 - Long-running turns (e.g. a 30-minute autonomous loop on a heavily-used account) can still cap mid-execution.
-- Defensive pattern: chunk long workflows so spawn boundaries occur naturally; cmaxctl does the rest.
+- Defensive pattern: chunk long workflows so spawn boundaries occur naturally; ccpool does the rest.
 - Future: if Anthropic exposes a graceful re-auth API, this ADR may be revisited and superseded.
 
 ## Out of scope

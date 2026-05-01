@@ -1,14 +1,14 @@
-# Linux test image for cmaxctl.
+# Linux test image for ccpool.
 #
 # Reproduces the CI matrix locally so contributors on macOS can validate
 # the Linux parity surface (XDG paths, secret-tool, systemd-user *units*,
 # bashrc + fish managed-block writing) before pushing.
 #
-# Build:   docker build -f install/linux/Dockerfile.test -t cmaxctl-test .
-# Run:     docker run --rm -v "$PWD:/repo" -w /repo cmaxctl-test
+# Build:   docker build -f install/linux/Dockerfile.test -t ccpool-test .
+# Run:     docker run --rm -v "$PWD:/repo" -w /repo ccpool-test
 #
 # The default CMD runs the full `pytest` suite; the keyring-roundtrip test
-# is opted-in via `CMAXCTL_TEST_LINUX_KEYRING=1`.
+# is opted-in via `CCPOOL_TEST_LINUX_KEYRING=1`.
 ARG UBUNTU_VERSION=24.04
 FROM ubuntu:${UBUNTU_VERSION}
 

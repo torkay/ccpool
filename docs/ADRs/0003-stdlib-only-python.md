@@ -8,7 +8,7 @@ Most CLI tooling on PyPI pulls in 5-50 transitive dependencies. Each of those is
 
 ## Decision
 
-The `cmaxctl/` runtime package depends ONLY on the Python stdlib (Python 3.11+).
+The `ccpool/` runtime package depends ONLY on the Python stdlib (Python 3.11+).
 
 Test/dev dependencies (`pytest`, `ruff`, `mypy`, `build`) are allowed under `[project.optional-dependencies].dev`.
 
@@ -31,12 +31,12 @@ Test/dev dependencies (`pytest`, `ruff`, `mypy`, `build`) are allowed under `[pr
 |---|---|---|
 | Add `requests` | nicer HTTP DSL | one dep → 5 transitive; no real win for one endpoint |
 | Add `pydantic` | nice config validation | one big dep → 10+ transitive; we own validation already |
-| Add `click` for CLI | nicer DX | argparse is fine; cmax is mostly a thin shell over the bash dispatcher |
+| Add `click` for CLI | nicer DX | argparse is fine; ccpool is mostly a thin shell over the bash dispatcher |
 | Add `httpx` | async + http2 | overkill; no use for either feature |
 
 ## Consequences
 
-- Cold-start is fast (~50ms for `cmax usage`).
+- Cold-start is fast (~50ms for `ccpool usage`).
 - No supply-chain attack surface beyond Python itself + `caam` (separately verified).
 - We hand-roll TOML *writing* and CLI argparse — accepting modest verbosity for zero deps.
 - Future maintainers cannot reach for `requests` etc without a new ADR overriding this one.

@@ -1,7 +1,7 @@
-"""Unit tests for cmaxctl.secrets in env-only mode.
+"""Unit tests for ccpool.secrets in env-only mode.
 
 These exercise the storage backend that is the cross-platform default once the
-keychain / secret-tool path declines, and is forced on by CMAXCTL_FORCE_ENV_STORAGE
+keychain / secret-tool path declines, and is forced on by CCPOOL_FORCE_ENV_STORAGE
 (set by conftest.py for every test).
 """
 from __future__ import annotations
@@ -13,9 +13,9 @@ import pytest
 
 
 def _fresh():
-    for mod in ("cmaxctl.paths", "cmaxctl.secrets"):
+    for mod in ("ccpool.paths", "ccpool.secrets"):
         sys.modules.pop(mod, None)
-    from cmaxctl import secrets
+    from ccpool import secrets
     return secrets
 
 

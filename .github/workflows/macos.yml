@@ -33,7 +33,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
       - name: Lint (ruff)
-        run: ruff check cmaxctl tests
+        run: ruff check ccpool tests
       - name: Unit + integration tests
         run: pytest tests/unit tests/integration -v
       - name: Install bats
@@ -51,9 +51,9 @@ jobs:
           set -e
           if grep -rE '(torrinkay|tor1|tor2|amatorri|/Users/)' \
                 --include='*.py' --include='*.sh' --include='*.toml' \
-                --include='*.md' --include=cmax \
-                cmaxctl tests docs bin \
-              | grep -vE '(tests/fixtures|cmaxctl/migrate.py|CHANGELOG\.md|/__pycache__/|\.git/)'; then
+                --include='*.md' --include=ccpool \
+                ccpool tests docs bin \
+              | grep -vE '(tests/fixtures|ccpool/migrate.py|CHANGELOG\.md|/__pycache__/|\.git/)'; then
             echo "::error::personal identifier leaked into the source tree" >&2
             exit 1
           fi
@@ -73,6 +73,6 @@ jobs:
           python -m build
       - uses: actions/upload-artifact@v4
         with:
-          name: cmaxctl-dist-macos
+          name: ccpool-dist-macos
           path: dist/
           retention-days: 7

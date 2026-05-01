@@ -24,8 +24,8 @@ Reproduced from the canonical hardening plan §15. Updated as new threats land o
 | T6 | Compromised PyPI package (typosquat) | low | high | publish only via OIDC + signed wheels (sigstore); README + INSTALL.md show exact package + repo URL |
 | T7 | caam binary trojaned | low | very high | document upstream verification; pin caam version in CI; suggest hash-pinning |
 | T8 | `notify.command` exfiltrates state | low | high | command receives only the alert JSON, not tokens; document this contract |
-| T9 | Lost state-dir → operator can't tell if tokens still in keychain | low | low | `cmax doctor` enumerates keychain entries via known service IDs |
-| T10 | `claude setup-token` issuing long-lived inference tokens that never expire | n/a (Anthropic-side) | medium | token age tracker warns at 330d, critical at 360d; `cmax rotate` rotates |
+| T9 | Lost state-dir → operator can't tell if tokens still in keychain | low | low | `ccpool doctor` enumerates keychain entries via known service IDs |
+| T10 | `claude setup-token` issuing long-lived inference tokens that never expire | n/a (Anthropic-side) | medium | token age tracker warns at 330d, critical at 360d; `ccpool rotate` rotates |
 
 ### T5 in detail (config-driven shell injection)
 
@@ -44,7 +44,7 @@ Two layers of mitigation:
 1. **Trusted publishing via OIDC.** The `release.yml` workflow publishes to PyPI using GitHub's OIDC identity provider; no API token lives in the repo or in CI secrets.
 2. **Sigstore signing** is queued for v1.1 — wheels will be signed with the GitHub Actions identity, verifiable via `pypi-attestations`.
 
-The package name itself is somewhat protected: `cmaxctl` is a clean grab on PyPI (the `cmax` name is already taken by an unrelated MIT-6.01 circuit sim, and we explicitly avoided it — see [ADR-0001](ADRs/0001-package-name.md)).
+The package name itself is somewhat protected: `ccpool` is a clean grab on PyPI (the `ccpool` name is already taken by an unrelated MIT-6.01 circuit sim, and we explicitly avoided it — see [ADR-0001](ADRs/0001-package-name.md)).
 
 ## Out of threat scope
 
@@ -54,13 +54,13 @@ The package name itself is somewhat protected: `cmaxctl` is a clean grab on PyPI
 | Multi-user shared machine | not supported; documented |
 | Mid-turn rotation of in-flight `claude` process | Anthropic doesn't expose graceful re-auth |
 
-These are deliberate scope choices, not oversights. cmaxctl assumes:
+These are deliberate scope choices, not oversights. ccpool assumes:
 
 - The OS user owns the machine (single-user model).
 - The OS keychain is trustworthy (or `tokens.env` 0600 is acceptable to the operator).
 - The Anthropic OAuth flow itself is sound — we don't try to harden it.
 
-If your threat model includes any of these, cmaxctl is the wrong tool.
+If your threat model includes any of these, ccpool is the wrong tool.
 
 ## Reporting a vulnerability
 

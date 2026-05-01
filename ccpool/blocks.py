@@ -1,4 +1,4 @@
-"""cmaxctl/blocks.py — local-transcript 5h-block estimator.
+"""ccpool/blocks.py — local-transcript 5h-block estimator.
 
 Replaces ccusage as a fallback signal source. Parses JSONL transcripts under
 `$CLAUDE_CONFIG_DIR/projects/**/*.jsonl` (or the profile's caam-isolated
@@ -23,7 +23,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from cmaxctl import caam, config, paths
+from ccpool import caam, config, paths
 
 BLOCK_HOURS = 5
 BLOCK_DURATION = timedelta(hours=BLOCK_HOURS)

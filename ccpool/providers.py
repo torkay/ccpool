@@ -1,6 +1,6 @@
-"""cmaxctl/providers.py — provider strategy table.
+"""ccpool/providers.py — provider strategy table.
 
-caam itself supports `claude`, `codex`, and `gemini`. cmaxctl v1.0 wires up
+caam itself supports `claude`, `codex`, and `gemini`. ccpool v1.0 wires up
 **claude full + codex/gemini stubs**. The stubs surface a clean
 `NotImplementedError` with a tracking-issue pointer when an operator tries
 to set `provider.name = "codex"` (or `"gemini"`) before the strategy is
@@ -74,14 +74,14 @@ def get_strategy(provider_name: str) -> ProviderStrategy:
     if name == "codex":
         raise UnsupportedProviderError(
             "provider 'codex' is recognised by caam but not yet implemented in "
-            "cmaxctl 1.0. Tracking: https://github.com/torkay/cmaxctl/issues "
+            "ccpool 1.0. Tracking: https://github.com/torkay/ccpool/issues "
             "(filter by label:provider). Switch [provider] name = \"claude\" "
             "in your config.toml to continue."
         )
     if name == "gemini":
         raise UnsupportedProviderError(
             "provider 'gemini' is recognised by caam but not yet implemented in "
-            "cmaxctl 1.0. Tracking: https://github.com/torkay/cmaxctl/issues "
+            "ccpool 1.0. Tracking: https://github.com/torkay/ccpool/issues "
             "(filter by label:provider). Switch [provider] name = \"claude\" "
             "in your config.toml to continue."
         )

@@ -1,8 +1,8 @@
-"""cmaxctl/migrate.py — v0 (personal `cmax` substrate) → v1 (cmaxctl) migrator.
+"""ccpool/migrate.py — v0 (personal `cmax` substrate) → v1 (ccpool) migrator.
 
 Detects a personal-substrate install (operator's tor1/tor2 + launchd plists with
 `com.<owner>.agent.*` labels + zshrc managed block) and migrates state to the
-public layout: cmaxctl config.toml + new label scheme + cmaxctl- keychain prefix.
+public layout: ccpool config.toml + new label scheme + ccpool- keychain prefix.
 
 Profiles, tokens, and accounts are preserved. The personal `~/Agent/.agent/tools/`
 substrate stays untouched (operator can archive when ready).
@@ -18,7 +18,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from cmaxctl import caam, config, paths, secrets, shell
+from ccpool import caam, config, paths, secrets, shell
 
 
 @dataclass
@@ -125,10 +125,10 @@ def synthesize_config_from_v0(d: V0Detection,
 
 
 def migrate_keychain_tokens(profiles: list[str]) -> dict[str, str]:
-    """Copy tokens from `caam-claude-token-<p>` to `cmaxctl-token-<p>`.
+    """Copy tokens from `caam-claude-token-<p>` to `ccpool-token-<p>`.
 
     Returns {profile: action} where action ∈ {"copied", "no-legacy", "failed"}.
-    Does NOT delete the legacy entries (operator can clean up via `cmax doctor`).
+    Does NOT delete the legacy entries (operator can clean up via `ccpool doctor`).
     """
     out: dict[str, str] = {}
     if sys.platform != "darwin":
@@ -211,7 +211,7 @@ def apply(plan_obj: MigrationPlan,
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("usage: python -m cmaxctl.migrate {detect | plan | apply [--owner=NAME]}",
+        print("usage: python -m ccpool.migrate {detect | plan | apply [--owner=NAME]}",
               file=sys.stderr)
         return 64
     cmd = sys.argv[1]

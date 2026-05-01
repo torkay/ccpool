@@ -1,6 +1,6 @@
 # Shell prompt integrations
 
-`cmax statusline` emits a one-line JSON snapshot of the current profile, utilization, and saturation/degraded flags — designed for shell prompt frameworks. `cmax statusline --short` emits a single-line text rendering (emoji + profile + percentages) suitable for direct interpolation.
+`ccpool statusline` emits a one-line JSON snapshot of the current profile, utilization, and saturation/degraded flags — designed for shell prompt frameworks. `ccpool statusline --short` emits a single-line text rendering (emoji + profile + percentages) suitable for direct interpolation.
 
 ## JSON shape
 
@@ -31,9 +31,9 @@
 [Starship](https://starship.rs/) renders prompt segments via `[custom]` blocks. Add to `~/.config/starship.toml`:
 
 ```toml
-[custom.cmax]
-command = "cmax statusline --short"
-when = "command -v cmax"
+[custom.ccpool]
+command = "ccpool statusline --short"
+when = "command -v ccpool"
 format = "[$output]($style) "
 style = "bold cyan"
 shell = ["bash", "--noprofile", "--norc"]
@@ -46,15 +46,15 @@ The `--short` mode emits something like `🟢 personal 42% / 71%`, which fits cl
 Add a custom segment in `~/.p10k.zsh`:
 
 ```zsh
-function prompt_cmax() {
-  if (( ${+commands[cmax]} )); then
+function prompt_ccpool() {
+  if (( ${+commands[ccpool]} )); then
     local out
-    out="$(cmax statusline --short 2>/dev/null)" || return
+    out="$(ccpool statusline --short 2>/dev/null)" || return
     p10k segment -f cyan -t "${out}"
   fi
 }
 
-# Then add `cmax` to your POWERLEVEL9K_LEFT_PROMPT_ELEMENTS or
+# Then add `ccpool` to your POWERLEVEL9K_LEFT_PROMPT_ELEMENTS or
 # POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS array.
 ```
 
@@ -63,13 +63,13 @@ function prompt_cmax() {
 In a custom theme (`~/.oh-my-zsh/custom/themes/<your>.zsh-theme`):
 
 ```zsh
-function cmax_prompt_info() {
-  if command -v cmax >/dev/null 2>&1; then
-    cmax statusline --short 2>/dev/null
+function ccpool_prompt_info() {
+  if command -v ccpool >/dev/null 2>&1; then
+    ccpool statusline --short 2>/dev/null
   fi
 }
 
-PROMPT='%{$fg_bold[blue]%}%n@%m%{$reset_color%} $(cmax_prompt_info) %{$fg[cyan]%}%~%{$reset_color%}\$ '
+PROMPT='%{$fg_bold[blue]%}%n@%m%{$reset_color%} $(ccpool_prompt_info) %{$fg[cyan]%}%~%{$reset_color%}\$ '
 ```
 
 ## tmux status line
@@ -77,7 +77,7 @@ PROMPT='%{$fg_bold[blue]%}%n@%m%{$reset_color%} $(cmax_prompt_info) %{$fg[cyan]%
 Add to `~/.tmux.conf`:
 
 ```tmux
-set -g status-right '#(cmax statusline --short) | %H:%M'
+set -g status-right '#(ccpool statusline --short) | %H:%M'
 set -g status-interval 30
 ```
 
@@ -88,8 +88,8 @@ The interval matches Anthropic's 5-minute usage cache window — polling more of
 For a no-framework setup:
 
 ```bash
-PROMPT_COMMAND='__cmax="$(cmax statusline --short 2>/dev/null)"; '$PROMPT_COMMAND
-PS1='$__cmax \w \$ '
+PROMPT_COMMAND='__ccpool="$(ccpool statusline --short 2>/dev/null)"; '$PROMPT_COMMAND
+PS1='$__ccpool \w \$ '
 ```
 
 ## Programmatic consumers (jq pipelines)
@@ -98,11 +98,11 @@ Pull specific fields:
 
 ```bash
 # Active profile + 5h utilization
-cmax statusline | jq -r '"\(.profile) \(.five_hour_pct)%"'
+ccpool statusline | jq -r '"\(.profile) \(.five_hour_pct)%"'
 
 # Alert if saturated
-if [[ "$(cmax statusline | jq -r '.saturated')" == "true" ]]; then
-  notify-send "cmax saturated"
+if [[ "$(ccpool statusline | jq -r '.saturated')" == "true" ]]; then
+  notify-send "ccpool saturated"
 fi
 ```
 

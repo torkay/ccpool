@@ -1,6 +1,6 @@
 # Compatibility
 
-Where cmaxctl runs, what's verified in CI, and what's known to need attention.
+Where ccpool runs, what's verified in CI, and what's known to need attention.
 
 ## Tier-1 (CI-verified every PR)
 
@@ -24,7 +24,7 @@ Where cmaxctl runs, what's verified in CI, and what's known to need attention.
 | OS | What works | Fallback chosen | Caveat |
 |---|---|---|---|
 | Headless Linux server (no D-Bus) | full CLI, env-only token store | `tokens.env` (mode 0600) | no native keyring; ADR-0008 |
-| Linux without systemd-user | full CLI | crontab fallback | `cmax doctor` reports cron mode; minute precision only |
+| Linux without systemd-user | full CLI | crontab fallback | `ccpool doctor` reports cron mode; minute precision only |
 | WSL2 (Ubuntu) | full CLI | secret-tool **if** `gnome-keyring` installed; else env-file | systemd-user works on WSL2 ≥ 0.67 |
 
 ## Explicitly unsupported
@@ -38,34 +38,34 @@ Where cmaxctl runs, what's verified in CI, and what's known to need attention.
 
 | OS | Recommended | One-liner |
 |---|---|---|
-| macOS | Homebrew | `brew tap torkay/cmaxctl && brew install cmaxctl && cmax setup` |
-| Ubuntu/Debian | pipx | `sudo apt install pipx libsecret-tools && pipx install cmaxctl && cmax setup` |
-| Fedora | pipx | `sudo dnf install pipx libsecret-tools && pipx install cmaxctl && cmax setup` |
-| Arch | pipx | `sudo pacman -S python-pipx libsecret && pipx install cmaxctl && cmax setup` |
-| Any unix | curl-bash | `curl -fsSL https://raw.githubusercontent.com/torkay/cmaxctl/main/install/install.sh \| bash` |
+| macOS | Homebrew | `brew tap torkay/ccpool && brew install ccpool && ccpool setup` |
+| Ubuntu/Debian | pipx | `sudo apt install pipx libsecret-tools && pipx install ccpool && ccpool setup` |
+| Fedora | pipx | `sudo dnf install pipx libsecret-tools && pipx install ccpool && ccpool setup` |
+| Arch | pipx | `sudo pacman -S python-pipx libsecret && pipx install ccpool && ccpool setup` |
+| Any unix | curl-bash | `curl -fsSL https://raw.githubusercontent.com/torkay/ccpool/main/install/install.sh \| bash` |
 
 ## What the CI lanes actually exercise
 
 | Job | Scope | Skip-conditions |
 |---|---|---|
 | `unit` | All `tests/unit/` + `tests/integration/test_no_binary_degraded.py`; ruff lint | linux + py 3.11/3.12 across ubuntu 22/24 |
-| `keyring` | `tests/integration/test_linux_keyring.py` under `dbus-run-session` + gnome-keyring | only ubuntu 24 + py 3.12; opt-in via `CMAXCTL_TEST_LINUX_KEYRING=1` |
+| `keyring` | `tests/integration/test_linux_keyring.py` under `dbus-run-session` + gnome-keyring | only ubuntu 24 + py 3.12; opt-in via `CCPOOL_TEST_LINUX_KEYRING=1` |
 | `identity-scrub` | `grep` gate: zero personal identifiers anywhere outside fixtures + migrate.py | runs on every PR, hard-fails on hit |
 | `package` | `python -m build` produces a sdist + wheel, uploads as artifact | every PR |
 
 ## Known caveats by platform
 
 ### macOS Keychain ACL bug (Apple #20553)
-On certain macOS versions a Keychain entry created in one boot session loses readability after reboot, forcing a re-`cmax setup`. cmaxctl detects this in `cmax doctor` (finding code `keychain_acl_corrupted`) and offers `cmax recover --rebuild-keychain` — see `docs/TROUBLESHOOTING.md`.
+On certain macOS versions a Keychain entry created in one boot session loses readability after reboot, forcing a re-`ccpool setup`. ccpool detects this in `ccpool doctor` (finding code `keychain_acl_corrupted`) and offers `ccpool recover --rebuild-keychain` — see `docs/TROUBLESHOOTING.md`.
 
 ### Linux without `secret-tool`
-If libsecret is absent, cmaxctl falls through to `tokens.env` at `$XDG_DATA_HOME/cmaxctl/tokens.env` with mode 0600. `cmax doctor` reports `secrets_backend_inconsistent` (LOW) so the operator can choose to install libsecret-tools or accept the env-file backend.
+If libsecret is absent, ccpool falls through to `tokens.env` at `$XDG_DATA_HOME/ccpool/tokens.env` with mode 0600. `ccpool doctor` reports `secrets_backend_inconsistent` (LOW) so the operator can choose to install libsecret-tools or accept the env-file backend.
 
 ### Linux without systemd-user
-On hosts where `systemctl --user` isn't available (some VPS minimal images), cmaxctl uses `crontab` for the watcher + watchdog. Minute precision is the floor; the watcher runs every 5 minutes. Switch to systemd-user any time by re-running `cmax setup`.
+On hosts where `systemctl --user` isn't available (some VPS minimal images), ccpool uses `crontab` for the watcher + watchdog. Minute precision is the floor; the watcher runs every 5 minutes. Switch to systemd-user any time by re-running `ccpool setup`.
 
 ### `XDG_RUNTIME_DIR` not set
-Headless boxes (CI runners, cron jobs) may not have `XDG_RUNTIME_DIR` exported. cmaxctl tolerates this and falls back to `XDG_DATA_HOME` for state files. Schedule install will detect and pick `cron` rather than `systemd-user`.
+Headless boxes (CI runners, cron jobs) may not have `XDG_RUNTIME_DIR` exported. ccpool tolerates this and falls back to `XDG_DATA_HOME` for state files. Schedule install will detect and pick `cron` rather than `systemd-user`.
 
 ## Local Linux validation from macOS
 
@@ -74,7 +74,7 @@ Run the full Linux suite in a container without leaving your laptop:
 ```bash
 ./install/linux/run-tests-in-docker.sh           # ubuntu 24.04
 ./install/linux/run-tests-in-docker.sh 22.04     # pin a different version
-CMAXCTL_TEST_LINUX_KEYRING=1 ./install/linux/run-tests-in-docker.sh
+CCPOOL_TEST_LINUX_KEYRING=1 ./install/linux/run-tests-in-docker.sh
 ```
 
 This builds the same `Dockerfile.test` the CI uses and mounts the repo so wheels build in tree.

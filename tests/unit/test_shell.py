@@ -1,4 +1,4 @@
-"""Unit tests for cmaxctl.shell — managed-block install/remove/idempotency.
+"""Unit tests for ccpool.shell — managed-block install/remove/idempotency.
 
 Covers: bashrc + zshrc + fish; legacy v0-block stripping; idempotent updates;
 preservation of user content outside markers.
@@ -9,9 +9,9 @@ import sys
 
 
 def _fresh():
-    for mod in ("cmaxctl.paths", "cmaxctl.config", "cmaxctl.shell"):
+    for mod in ("ccpool.paths", "ccpool.config", "ccpool.shell"):
         sys.modules.pop(mod, None)
-    from cmaxctl import config, shell
+    from ccpool import config, shell
     return config, shell
 
 
@@ -43,8 +43,8 @@ def test_install_writes_block_to_existing_file(tmp_path):
     text = rc.read_text()
     assert "user line one" in text
     assert shell.BEGIN_MARKER in text
-    assert "alias claude='cmax'" in text
-    assert "export CMAXCTL_USE_TOKEN=1" in text
+    assert "alias claude='ccpool'" in text
+    assert "export CCPOOL_USE_TOKEN=1" in text
 
 
 def test_install_is_idempotent(tmp_path):
@@ -70,7 +70,7 @@ def test_install_updates_existing_block_in_place(tmp_path):
     cfg.shell.alias_claude = False  # change something
     shell.install(cfg)
     text = rc.read_text()
-    assert "alias claude='cmax'" not in text
+    assert "alias claude='ccpool'" not in text
     assert text.count(shell.BEGIN_MARKER) == 1
 
 
@@ -87,14 +87,14 @@ def test_remove_strips_block_and_preserves_user_lines(tmp_path):
 
 
 def test_legacy_v0_block_stripped_on_install(tmp_path):
-    """An older personal-substrate `cmax (Claude Max rotation)` block must be
+    """An older personal-substrate `ccpool (Claude Max rotation)` block must be
     removed and replaced with the v1 block."""
     config, shell = _fresh()
     rc = tmp_path / ".zshrc"
     rc.write_text(
         "# user prelude\n"
         + shell.LEGACY_BEGIN_MARKERS[0] + "\n"
-        + "alias claude='/old/path/cmax'\n"
+        + "alias claude='/old/path/ccpool'\n"
         + shell.LEGACY_END_MARKERS[0] + "\n"
         + "# user epilogue\n"
     )
@@ -102,7 +102,7 @@ def test_legacy_v0_block_stripped_on_install(tmp_path):
     shell.install(cfg)
     text = rc.read_text()
     assert shell.LEGACY_BEGIN_MARKERS[0] not in text
-    assert "/old/path/cmax" not in text
+    assert "/old/path/ccpool" not in text
     assert shell.BEGIN_MARKER in text
     assert "# user prelude" in text
     assert "# user epilogue" in text
@@ -110,14 +110,14 @@ def test_legacy_v0_block_stripped_on_install(tmp_path):
 
 def test_fish_conf_d_uses_fish_syntax(tmp_path, monkeypatch):
     config, shell = _fresh()
-    fish = tmp_path / "fish" / "conf.d" / "cmaxctl.fish"
+    fish = tmp_path / "fish" / "conf.d" / "ccpool.fish"
     cfg = _make_cfg(config, [str(fish)])
     shell.install(cfg)
     assert fish.exists()
     text = fish.read_text()
-    assert "set -gx CMAXCTL_USE_TOKEN" in text
-    assert "alias claude 'cmax'" in text  # fish-style: no '='
-    assert "export CMAXCTL_USE_TOKEN" not in text
+    assert "set -gx CCPOOL_USE_TOKEN" in text
+    assert "alias claude 'ccpool'" in text  # fish-style: no '='
+    assert "export CCPOOL_USE_TOKEN" not in text
 
 
 def test_disabled_manage_rc_file_is_a_noop(tmp_path):
@@ -128,4 +128,4 @@ def test_disabled_manage_rc_file_is_a_noop(tmp_path):
     cfg.shell.manage_rc_file = False
     log = shell.install(cfg)
     assert log == []
-    assert "cmaxctl" not in rc.read_text()
+    assert "ccpool" not in rc.read_text()

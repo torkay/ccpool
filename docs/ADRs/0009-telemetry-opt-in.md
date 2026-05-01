@@ -16,14 +16,14 @@ When enabled, the payload is minimised and anonymised:
 |---|---|
 | OS + version (`darwin 25.2.0`) | hostname, username |
 | Python version | working directory |
-| cmaxctl + caam + claude versions | tokens (any kind) |
+| ccpool + caam + claude versions | tokens (any kind) |
 | anonymised crash signature (`file:line + ExceptionClass`) | full traceback content (may contain user paths) |
 | feature counter (`rotate_fired`) | profile names, account emails |
 | install path used (brew/curl/pipx/pip) | path with `$HOME` |
 
 ## Endpoint
 
-Operator-supplied via `cfg.telemetry.endpoint`. We may stand up a public collector at `metrics.cmaxctl.dev` post-v1.0 — but only if it remains true-opt-in (no default value pointing at it).
+Operator-supplied via `cfg.telemetry.endpoint`. We may stand up a public collector at `metrics.ccpool.dev` post-v1.0 — but only if it remains true-opt-in (no default value pointing at it).
 
 ## Why opt-in
 
@@ -43,4 +43,4 @@ Local-only:
 - `watcher.ndjson` (rotation events) — never leaves the machine
 - `usage_cache.json` (5-second utilization snapshots) — never leaves the machine
 
-These exist for diagnostics (`cmax logs`) and the picker, respectively. They contain no operator identifiers.
+These exist for diagnostics (`ccpool logs`) and the picker, respectively. They contain no operator identifiers.

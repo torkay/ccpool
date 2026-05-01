@@ -1,6 +1,6 @@
-"""cmaxctl/status.py — gather + render status dashboard.
+"""ccpool/status.py — gather + render status dashboard.
 
-`gather_status(cfg)` snapshots everything for `cmax status` / `cmax inventory`.
+`gather_status(cfg)` snapshots everything for `ccpool status` / `ccpool inventory`.
 `render_status_human(s)` produces ANSI-coloured terminal output.
 `render_status_json(s)` produces stable JSON for tooling.
 """
@@ -11,7 +11,7 @@ import os
 import sys
 from typing import Any
 
-from cmaxctl import caam, config, doctor, paths, platform, secrets
+from ccpool import caam, config, doctor, paths, platform, secrets
 
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
@@ -23,7 +23,7 @@ RESET = "\033[0m"
 
 
 def _isatty() -> bool:
-    return sys.stdout.isatty() and os.environ.get("CMAXCTL_NO_COLOR") != "1"
+    return sys.stdout.isatty() and os.environ.get("CCPOOL_NO_COLOR") != "1"
 
 
 def _c(text: str, color: str) -> str:
@@ -77,11 +77,11 @@ def gather_status(cfg: config.Config | None = None) -> dict[str, Any]:
 
 def render_status_human(s: dict[str, Any]) -> str:
     lines: list[str] = []
-    lines.append(_c("cmaxctl status", BOLD))
+    lines.append(_c("ccpool status", BOLD))
     lines.append("")
 
     if s.get("disabled"):
-        lines.append(_c("⚠  cmaxctl is DISABLED — `cmax enable` to re-enable", YELLOW))
+        lines.append(_c("⚠  ccpool is DISABLED — `ccpool enable` to re-enable", YELLOW))
         lines.append("")
 
     if not s.get("caam_present"):
@@ -89,7 +89,7 @@ def render_status_human(s: dict[str, Any]) -> str:
         return "\n".join(lines)
 
     if s["profile_count"] == 0:
-        lines.append(_c("✗ 0 profiles configured — run `cmax setup`", RED))
+        lines.append(_c("✗ 0 profiles configured — run `ccpool setup`", RED))
     else:
         lines.append(_c(f"profiles ({s['profile_count']})", BOLD))
         for p in s["profiles"]:
@@ -125,7 +125,7 @@ def render_status_human(s: dict[str, Any]) -> str:
     if s.get("degraded"):
         lines.append(_c(f"  degradation flag SET — {s['degraded_reason']}", RED))
     if s.get("saturated"):
-        lines.append(_c("  saturated flag SET — see `cmax usage` for details", YELLOW))
+        lines.append(_c("  saturated flag SET — see `ccpool usage` for details", YELLOW))
     lines.append("")
 
     storage = s.get("storage") or {}
@@ -133,7 +133,7 @@ def render_status_human(s: dict[str, Any]) -> str:
     lines.append(f"  native backend: {storage.get('native_backend', '?')}")
     lines.append(f"  env file:       {storage.get('env_file', '?')} (exists: {storage.get('env_file_exists', False)})")
     if storage.get("force_env"):
-        lines.append(_c("  CMAXCTL_FORCE_ENV_STORAGE=1 (force-env mode)", YELLOW))
+        lines.append(_c("  CCPOOL_FORCE_ENV_STORAGE=1 (force-env mode)", YELLOW))
 
     return "\n".join(lines)
 

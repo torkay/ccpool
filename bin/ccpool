@@ -1,36 +1,36 @@
 #!/usr/bin/env bash
-# cmax — public entry point for cmaxctl.
+# ccpool — public entry point for ccpool.
 #
-#   cmax                          run claude with full rotation + token (default)
-#   cmax <args>                   transparent wrap of `claude <args>`
-#   cmax setup                    interactive bootstrap (asks for accounts; OAuth)
-#   cmax status [--json]          health dashboard
-#   cmax doctor [--fix] [--json]  diagnose + auto-fix
-#   cmax rotate [<profile>|all]   re-issue + store new long-lived token(s)
-#   cmax recover                  prune backups, clear flags, re-stage schedules
-#   cmax logs [-n N]              tail watcher events
-#   cmax pick [--token]           debug: print next-spawn env (redacted)
-#   cmax usage [--json]           per-account 5h+7d util (ground truth)
-#   cmax statusline [--short]     one-line JSON for prompt integrations
-#   cmax migrate {detect|plan|apply}   v0 (personal substrate) → v1
-#   cmax enable | disable         master kill-switch
-#   cmax version                  print component versions
-#   cmax help                     this help
+#   ccpool                          run claude with full rotation + token (default)
+#   ccpool <args>                   transparent wrap of `claude <args>`
+#   ccpool setup                    interactive bootstrap (asks for accounts; OAuth)
+#   ccpool status [--json]          health dashboard
+#   ccpool doctor [--fix] [--json]  diagnose + auto-fix
+#   ccpool rotate [<profile>|all]   re-issue + store new long-lived token(s)
+#   ccpool recover                  prune backups, clear flags, re-stage schedules
+#   ccpool logs [-n N]              tail watcher events
+#   ccpool pick [--token]           debug: print next-spawn env (redacted)
+#   ccpool usage [--json]           per-account 5h+7d util (ground truth)
+#   ccpool statusline [--short]     one-line JSON for prompt integrations
+#   ccpool migrate {detect|plan|apply}   v0 (personal substrate) → v1
+#   ccpool enable | disable         master kill-switch
+#   ccpool version                  print component versions
+#   ccpool help                     this help
 
 set -u
 
 # ──────────────────────────────────────────────────────────────────────
-# Resolve cmaxctl python module + caam/claude binaries.
+# Resolve ccpool python module + caam/claude binaries.
 # ──────────────────────────────────────────────────────────────────────
-CMAX_PY="${CMAX_PY:-python3}"
-# Find the cmaxctl package: same dir as this script's parent (in source/dev),
-# or via `python3 -c "import cmaxctl"` (when installed via pip/pipx/brew).
+CCPOOL_PY="${CCPOOL_PY:-python3}"
+# Find the ccpool package: same dir as this script's parent (in source/dev),
+# or via `python3 -c "import ccpool"` (when installed via pip/pipx/brew).
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(dirname "${SCRIPT_DIR}")"
 
-if [[ -d "${REPO_DIR}/cmaxctl" ]] && "${CMAX_PY}" -c "
+if [[ -d "${REPO_DIR}/ccpool" ]] && "${CCPOOL_PY}" -c "
 import sys; sys.path.insert(0, '${REPO_DIR}')
-import cmaxctl
+import ccpool
 " 2>/dev/null; then
   export PYTHONPATH="${REPO_DIR}:${PYTHONPATH:-}"
 fi
@@ -38,8 +38,8 @@ fi
 CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude || echo /usr/local/bin/claude)}"
 CAAM_BIN="${CAAM_BIN:-$(command -v caam || echo "${HOME}/.local/bin/caam")}"
 
-CMAX_DATA="${XDG_DATA_HOME:-${HOME}/.local/share}/cmaxctl"
-CMAX_DISABLED="${CMAX_DATA}/disabled"
+CCPOOL_DATA="${XDG_DATA_HOME:-${HOME}/.local/share}/ccpool"
+CCPOOL_DISABLED="${CCPOOL_DATA}/disabled"
 
 # ──────────────────────────────────────────────────────────────────────
 # Helpers
@@ -52,7 +52,7 @@ is_subcommand() {
 }
 
 cli() {
-  "${CMAX_PY}" -m cmaxctl.cli "$@"
+  "${CCPOOL_PY}" -m ccpool.cli "$@"
 }
 
 _g() { if [[ -t 1 ]]; then printf '\033[32m✓\033[0m'; else printf '✓'; fi; }
@@ -99,7 +99,7 @@ _open_url() {
 # Default mode — wrap `claude` with caam smart-routing + token injection.
 # ──────────────────────────────────────────────────────────────────────
 run_claude_default_mode() {
-  if [[ -f "${CMAX_DISABLED}" || "${CLAUDE_ROTATE_DISABLE:-0}" == "1" ]]; then
+  if [[ -f "${CCPOOL_DISABLED}" || "${CLAUDE_ROTATE_DISABLE:-0}" == "1" ]]; then
     exec "${CLAUDE_BIN}" "$@"
   fi
   if ! command -v caam >/dev/null 2>&1; then
@@ -109,7 +109,7 @@ run_claude_default_mode() {
   # Need ≥2 healthy profiles
   local profile_count
   profile_count="$("${CAAM_BIN}" robot status claude 2>/dev/null \
-    | "${CMAX_PY}" -c '
+    | "${CCPOOL_PY}" -c '
 import json, sys
 try:
     d = json.load(sys.stdin)
@@ -121,23 +121,23 @@ except Exception:
     exec "${CLAUDE_BIN}" "$@"
   fi
 
-  # Optional token injection (CMAXCTL_USE_TOKEN=1 or legacy CLAUDE_ROTATE_USE_TOKEN=1)
-  if [[ "${CMAXCTL_USE_TOKEN:-${CLAUDE_ROTATE_USE_TOKEN:-0}}" == "1" ]]; then
+  # Optional token injection (CCPOOL_USE_TOKEN=1 or legacy CLAUDE_ROTATE_USE_TOKEN=1)
+  if [[ "${CCPOOL_USE_TOKEN:-${CLAUDE_ROTATE_USE_TOKEN:-0}}" == "1" ]]; then
     local pick_json profile tok
     pick_json="$(cli pick --token --json 2>/dev/null || true)"
     if [[ -n "${pick_json}" ]]; then
-      profile="$(printf '%s' "${pick_json}" | "${CMAX_PY}" -c '
+      profile="$(printf '%s' "${pick_json}" | "${CCPOOL_PY}" -c '
 import json,sys
 try:
     d = json.load(sys.stdin)
-    print(d.get("env",{}).get("CMAXCTL_PROFILE","") or d.get("env",{}).get("AGENT_FLEET_CAAM_PROFILE",""))
+    print(d.get("env",{}).get("CCPOOL_PROFILE","") or d.get("env",{}).get("AGENT_FLEET_CAAM_PROFILE",""))
 except Exception:
     pass
 ' 2>/dev/null)"
       if [[ -n "${profile:-}" ]]; then
         tok="$(cli record-token --print "${profile}" 2>/dev/null || true)"
         # Fallback: read directly via the package
-        tok="$("${CMAX_PY}" -c "from cmaxctl import secrets; t=secrets.get_token('${profile}'); print(t or '')" 2>/dev/null)"
+        tok="$("${CCPOOL_PY}" -c "from ccpool import secrets; t=secrets.get_token('${profile}'); print(t or '')" 2>/dev/null)"
         if [[ -n "${tok}" ]]; then
           export CLAUDE_CODE_OAUTH_TOKEN="${tok}"
         fi
@@ -163,7 +163,7 @@ except Exception:
 cmd_setup() {
   echo
   _b "═══════════════════════════════════════════════════════════════════"; echo
-  _b "  cmaxctl setup"; echo
+  _b "  ccpool setup"; echo
   _b "═══════════════════════════════════════════════════════════════════"; echo
   echo "Wires up smart Claude Max account rotation."
   echo "Re-run any time — skips anything already done."
@@ -183,7 +183,7 @@ cmd_setup() {
 
   # ── Detect v0 substrate and offer migration ──
   local v0_detect; v0_detect="$(cli migrate detect 2>/dev/null || true)"
-  local v0_detected; v0_detected="$(printf '%s' "${v0_detect}" | "${CMAX_PY}" -c '
+  local v0_detected; v0_detected="$(printf '%s' "${v0_detect}" | "${CCPOOL_PY}" -c '
 import json,sys
 try: print(str(json.load(sys.stdin).get("detected", False)).lower())
 except: print("false")
@@ -192,9 +192,9 @@ except: print("false")
     echo
     _b "v0 personal substrate detected"; echo
     printf '  %s\n' "$(_y) signals:"
-    printf '%s\n' "${v0_detect}" | "${CMAX_PY}" -c 'import json,sys; [print("    -", s) for s in json.load(sys.stdin).get("signals",[])]'
+    printf '%s\n' "${v0_detect}" | "${CCPOOL_PY}" -c 'import json,sys; [print("    -", s) for s in json.load(sys.stdin).get("signals",[])]'
     echo
-    printf '  Migrate to v1 cmaxctl config? [Y/n/d (dry-run)] '
+    printf '  Migrate to v1 ccpool config? [Y/n/d (dry-run)] '
     local choice=""; _read_line choice
     case "${choice,,}" in
       d|dry|dry-run)
@@ -202,7 +202,7 @@ except: print("false")
         return 0
         ;;
       n|no)
-        echo "  Skipping migration. You can run 'cmax migrate apply' later."
+        echo "  Skipping migration. You can run 'ccpool migrate apply' later."
         ;;
       *)
         echo "  Running migration..."
@@ -221,8 +221,8 @@ except: print("false")
 
   # Read profile list from config
   local profiles_json
-  profiles_json="$("${CMAX_PY}" -c '
-from cmaxctl import config
+  profiles_json="$("${CCPOOL_PY}" -c '
+from ccpool import config
 cfg = config.load()
 import json
 print(json.dumps([(p.name, p.email) for p in cfg.profiles]))
@@ -232,12 +232,12 @@ print(json.dumps([(p.name, p.email) for p in cfg.profiles]))
     echo
     _b "No profiles configured yet. Let's add some."; echo
     echo "You'll need at least 2 Claude Max accounts (different emails)."
-    echo "Press Ctrl+C to abort; you can re-run cmax setup later."
+    echo "Press Ctrl+C to abort; you can re-run ccpool setup later."
     echo
     _setup_profiles_interactive
     inv="$(cli inventory 2>/dev/null || echo '{}')"
-    profiles_json="$("${CMAX_PY}" -c '
-from cmaxctl import config
+    profiles_json="$("${CCPOOL_PY}" -c '
+from ccpool import config
 cfg = config.load()
 import json
 print(json.dumps([(p.name, p.email) for p in cfg.profiles]))
@@ -247,7 +247,7 @@ print(json.dumps([(p.name, p.email) for p in cfg.profiles]))
   # ── Per-profile execution ──
   echo
   _b "Setting up per-account state"; echo
-  echo "${profiles_json}" | "${CMAX_PY}" -c "
+  echo "${profiles_json}" | "${CCPOOL_PY}" -c "
 import json, sys
 items = json.load(sys.stdin)
 for name, email in items:
@@ -271,8 +271,8 @@ _setup_profiles_interactive() {
     [[ -z "${name}" ]] && break
     printf '  Profile %d email (Claude Max account): ' "$i"
     local email=""; _read_line email
-    "${CMAX_PY}" -c "
-from cmaxctl import config
+    "${CCPOOL_PY}" -c "
+from ccpool import config
 cfg = config.load()
 cfg.profiles.append(config.Profile(name='${name}', email='${email}'))
 config.write(cfg)
@@ -290,7 +290,7 @@ print('  ✓ added profile:', '${name}', '<${email}>')
 _provision_profile() {
   local profile="$1" email="$2"
   local creds_present
-  creds_present="$(printf '%s' "${inv}" | "${CMAX_PY}" -c "
+  creds_present="$(printf '%s' "${inv}" | "${CCPOOL_PY}" -c "
 import json,sys
 d = json.load(sys.stdin)
 print(str(d.get('profiles',{}).get('${profile}',{}).get('credentials_present', False)).lower())
@@ -302,8 +302,8 @@ print(str(d.get('profiles',{}).get('${profile}',{}).get('credentials_present', F
   # Sign in if needed
   if [[ "${creds_present}" != "true" ]]; then
     printf '  %s preparing isolated workspace\n' "$(_y)"
-    "${CMAX_PY}" -c "
-from cmaxctl import caam
+    "${CCPOOL_PY}" -c "
+from ccpool import caam
 ok, err = caam.profile_ensure('${profile}')
 import sys
 sys.exit(0 if ok else 1)
@@ -314,7 +314,7 @@ sys.exit(0 if ok else 1)
 
     printf '  %s opening Claude sign-in. Use account: \033[1m%s\033[0m\n' "$(_y)" "${email}"
     if ! _login_profile "${profile}" "${email}"; then
-      printf '  %s sign-in did not complete. Re-run cmax setup to retry.\n' "$(_r)" >&2
+      printf '  %s sign-in did not complete. Re-run ccpool setup to retry.\n' "$(_r)" >&2
       return 1
     fi
 
@@ -326,7 +326,7 @@ sys.exit(0 if ok else 1)
 
   # Token if needed
   local token_present
-  token_present="$(printf '%s' "${inv}" | "${CMAX_PY}" -c "
+  token_present="$(printf '%s' "${inv}" | "${CCPOOL_PY}" -c "
 import json,sys
 d = json.load(sys.stdin)
 print(str(d.get('tokens',{}).get('${profile}',{}).get('present', False)).lower())
@@ -345,7 +345,7 @@ _login_profile() {
     printf '  %s caam env returned nothing for %s\n' "$(_r)" "${profile}" >&2
     return 1
   fi
-  local errfile; errfile="$(mktemp -t cmax-login.XXXXXX 2>/dev/null || echo /dev/null)"
+  local errfile; errfile="$(mktemp -t ccpool-login.XXXXXX 2>/dev/null || echo /dev/null)"
   (
     eval "${env_lines}"
     if [[ -t 0 && -t 1 && -t 2 ]]; then
@@ -361,7 +361,7 @@ _login_profile() {
   rm -f "${errfile}" 2>/dev/null
   # Verify creds landed
   local cred_path
-  cred_path="$("${CMAX_PY}" -c "from cmaxctl import caam; print(caam.profile_creds_path('${profile}'))")"
+  cred_path="$("${CCPOOL_PY}" -c "from ccpool import caam; print(caam.profile_creds_path('${profile}'))")"
   if [[ -f "${cred_path}" ]]; then
     return 0
   fi
@@ -371,13 +371,13 @@ _login_profile() {
 _same_account_guard() {
   local profile="$1" email="$2"
   local mine
-  mine="$("${CMAX_PY}" -c "from cmaxctl import identity; print(identity.profile_identity_marker('${profile}') or '')")"
+  mine="$("${CCPOOL_PY}" -c "from ccpool import identity; print(identity.profile_identity_marker('${profile}') or '')")"
   if [[ -z "${mine}" ]]; then
     return 0  # don't block on a probe failure
   fi
   local matches
-  matches="$("${CMAX_PY}" -c "
-from cmaxctl import config, identity
+  matches="$("${CCPOOL_PY}" -c "
+from ccpool import config, identity
 cfg = config.load()
 matches = []
 for other in cfg.profiles:
@@ -393,7 +393,7 @@ print(','.join(matches))
     echo "  ${profile} signed into the same Claude account as: ${matches}"
     echo "  Both profiles must point at DIFFERENT accounts for rotation to work."
     echo
-    "${CMAX_PY}" -c "from cmaxctl import caam; caam.profile_purge('${profile}')"
+    "${CCPOOL_PY}" -c "from ccpool import caam; caam.profile_purge('${profile}')"
     return 1
   fi
   return 0
@@ -435,15 +435,15 @@ _issue_token_for() {
   fi
 
   local store_out
-  store_out="$("${CMAX_PY}" -c "
-from cmaxctl import secrets
+  store_out="$("${CCPOOL_PY}" -c "
+from ccpool import secrets
 backend, err = secrets.set_token('${profile}', '${new_tok}', '${email}')
 import json
 print(json.dumps({'backend': backend, 'error': err}))
 " 2>&1)"
   local backend err
-  backend="$(printf '%s' "${store_out}" | "${CMAX_PY}" -c 'import json,sys; print(json.load(sys.stdin).get("backend") or "?")' 2>/dev/null || echo "?")"
-  err="$(printf '%s' "${store_out}" | "${CMAX_PY}" -c 'import json,sys; print(json.load(sys.stdin).get("error") or "")' 2>/dev/null || echo "")"
+  backend="$(printf '%s' "${store_out}" | "${CCPOOL_PY}" -c 'import json,sys; print(json.load(sys.stdin).get("backend") or "?")' 2>/dev/null || echo "?")"
+  err="$(printf '%s' "${store_out}" | "${CCPOOL_PY}" -c 'import json,sys; print(json.load(sys.stdin).get("error") or "")' 2>/dev/null || echo "")"
 
   cli record-token "${profile}" "${email}" >/dev/null 2>&1 || true
   unset new_tok
@@ -462,17 +462,17 @@ _wire_up_automation() {
   echo
   _b "Automation"; echo
   # Use Python platform.schedule_install
-  "${CMAX_PY}" -c "
-from cmaxctl import platform, config, paths
+  "${CCPOOL_PY}" -c "
+from ccpool import platform, config, paths
 import sys
 cfg = config.load()
 ok1, err1 = platform.schedule_install('watcher',
-    [sys.executable, '-m', 'cmaxctl.watcher'],
+    [sys.executable, '-m', 'ccpool.watcher'],
     every_s=cfg.watcher.interval_s,
     owner=cfg.meta.repo_owner)
 print(('  ✓' if ok1 else '  →'), 'rotation watcher', err1)
 ok2, err2 = platform.schedule_install('watchdog',
-    [sys.executable, '-m', 'cmaxctl.watchdog'],
+    [sys.executable, '-m', 'ccpool.watchdog'],
     every_s=86400,
     owner=cfg.meta.repo_owner)
 print(('  ✓' if ok2 else '  →'), 'daily watchdog', err2)
@@ -484,14 +484,14 @@ print(('  ✓' if ok2 else '  →'), 'daily watchdog', err2)
 _print_completion() {
   echo
   if [[ -t 1 ]]; then
-    printf '\033[1;32m%s\033[0m\n' "All set. From a new terminal, just type:  cmax"
+    printf '\033[1;32m%s\033[0m\n' "All set. From a new terminal, just type:  ccpool"
   else
-    echo "All set. From a new terminal, just type:  cmax"
+    echo "All set. From a new terminal, just type:  ccpool"
   fi
   echo
   echo "Verify any time with:"
-  echo "  cmax usage    — live utilization"
-  echo "  cmax doctor   — health check"
+  echo "  ccpool usage    — live utilization"
+  echo "  ccpool doctor   — health check"
   echo
   printf '%s Quick live check:\n' "$(_y)"
   cli usage 2>&1 || true
@@ -506,8 +506,8 @@ cmd_rotate() {
   if [[ "${target}" == "all" ]]; then
     while IFS= read -r line; do
       profiles+=("${line}")
-    done < <("${CMAX_PY}" -c "
-from cmaxctl import config
+    done < <("${CCPOOL_PY}" -c "
+from ccpool import config
 cfg = config.load()
 for p in cfg.profiles: print(p.name)
 ")
@@ -519,8 +519,8 @@ for p in cfg.profiles: print(p.name)
   for p in "${profiles[@]}"; do
     [[ -z "${p}" ]] && continue
     local email
-    email="$("${CMAX_PY}" -c "
-from cmaxctl import config
+    email="$("${CCPOOL_PY}" -c "
+from ccpool import config
 cfg = config.load()
 for prof in cfg.profiles:
     if prof.name == '${p}':
@@ -540,11 +540,11 @@ cmd_help() {
   sed -n '2,21p' "$0"
 }
 
-cmd_enable()  { rm -f "${CMAX_DISABLED}" && echo "cmax: enabled"; }
+cmd_enable()  { rm -f "${CCPOOL_DISABLED}" && echo "ccpool: enabled"; }
 cmd_disable() {
-  mkdir -p "$(dirname "${CMAX_DISABLED}")"
-  date +%s > "${CMAX_DISABLED}"
-  echo "cmax: disabled (raw \`claude\` will run unwrapped)"
+  mkdir -p "$(dirname "${CCPOOL_DISABLED}")"
+  date +%s > "${CCPOOL_DISABLED}"
+  echo "ccpool: disabled (raw \`claude\` will run unwrapped)"
 }
 
 # ──────────────────────────────────────────────────────────────────────

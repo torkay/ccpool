@@ -1,13 +1,13 @@
-"""Unit tests for cmaxctl.identity — fingerprint vs identity-marker semantics."""
+"""Unit tests for ccpool.identity — fingerprint vs identity-marker semantics."""
 from __future__ import annotations
 
 import sys
 
 
 def _fresh():
-    for mod in ("cmaxctl.identity",):
+    for mod in ("ccpool.identity",):
         sys.modules.pop(mod, None)
-    from cmaxctl import identity
+    from ccpool import identity
     return identity
 
 

@@ -6,7 +6,7 @@ Date: 2026-04-27 · Status: accepted
 
 Anthropic's `claude.ai` web UI shows live 5-hour and 7-day utilization plus PAYG ("extra usage") credit burn. The data comes from `GET https://api.anthropic.com/api/oauth/usage` with header `anthropic-beta: oauth-2025-04-20`. This endpoint is undocumented but stable enough to power the UI for many months, and is reverse-engineered by [`wcruz-br/claude-usage-dashboard`](https://github.com/wcruz-br/claude-usage-dashboard) and others.
 
-cmaxctl's tier-1 picker uses this endpoint as ground truth: pick the lowest-utilization profile.
+ccpool's tier-1 picker uses this endpoint as ground truth: pick the lowest-utilization profile.
 
 ## Decision
 
@@ -30,10 +30,10 @@ When **all** profiles report ≥95% utilization, the picker returns `SATURATED_S
 | Tier | Source | Used when |
 |---|---|---|
 | 1 (primary) | `/api/oauth/usage` | endpoint reachable + token has `user:profile` scope |
-| 2 (peer-promoted) | local JSONL block parser (`cmaxctl/blocks.py`) | endpoint unreachable; we still have local 5h-block heuristics |
+| 2 (peer-promoted) | local JSONL block parser (`ccpool/blocks.py`) | endpoint unreachable; we still have local 5h-block heuristics |
 | 3 (last-resort) | round-robin via on-disk counter | both above failed |
 
-If 3 consecutive watcher ticks see 4xx from the endpoint, we activate Plan-B by flipping `cfg.picker.strategy_order` to skip `usage_aware`. Operator can revert with `cmax recover` once the endpoint comes back.
+If 3 consecutive watcher ticks see 4xx from the endpoint, we activate Plan-B by flipping `cfg.picker.strategy_order` to skip `usage_aware`. Operator can revert with `ccpool recover` once the endpoint comes back.
 
 ## What we will NOT do
 

@@ -1,21 +1,21 @@
-"""cmaxctl/paths.py — XDG / macOS path resolution.
+"""ccpool/paths.py — XDG / macOS path resolution.
 
-Single source of truth for every filesystem location cmaxctl reads or writes.
+Single source of truth for every filesystem location ccpool reads or writes.
 No personal identifiers; everything derives from $HOME, XDG_*, or sys.platform.
 
 Resolution order for *config*:
-    1. $CMAXCTL_CONFIG (explicit override; rarely set)
-    2. $XDG_CONFIG_HOME/cmaxctl/config.toml
-    3. ~/Library/Application Support/cmaxctl/config.toml (macOS only)
-    4. ~/.config/cmaxctl/config.toml
+    1. $CCPOOL_CONFIG (explicit override; rarely set)
+    2. $XDG_CONFIG_HOME/ccpool/config.toml
+    3. ~/Library/Application Support/ccpool/config.toml (macOS only)
+    4. ~/.config/ccpool/config.toml
 
 Resolution order for *state*:
-    1. $XDG_DATA_HOME/cmaxctl/
-    2. ~/.local/share/cmaxctl/
+    1. $XDG_DATA_HOME/ccpool/
+    2. ~/.local/share/ccpool/
 
 Resolution order for *cache*:
-    1. $XDG_CACHE_HOME/cmaxctl/
-    2. ~/Library/Caches/cmaxctl/ (macOS) or ~/.cache/cmaxctl/ (Linux)
+    1. $XDG_CACHE_HOME/ccpool/
+    2. ~/Library/Caches/ccpool/ (macOS) or ~/.cache/ccpool/ (Linux)
 """
 from __future__ import annotations
 
@@ -23,10 +23,10 @@ import os
 import sys
 from pathlib import Path
 
-APP_NAME = "cmaxctl"
+APP_NAME = "ccpool"
 
 # Keychain service prefix for long-lived OAuth tokens.
-SERVICE_PREFIX = "cmaxctl-token-"
+SERVICE_PREFIX = "ccpool-token-"
 # Legacy prefix used by the personal substrate; migrate.py rewrites this.
 LEGACY_SERVICE_PREFIX = "caam-claude-token-"
 
@@ -55,7 +55,7 @@ def home() -> Path:
 # ────────────────────────── config ──────────────────────────
 
 def explicit_config_override() -> Path | None:
-    raw = os.environ.get("CMAXCTL_CONFIG", "").strip()
+    raw = os.environ.get("CCPOOL_CONFIG", "").strip()
     if not raw:
         return None
     return Path(raw).expanduser()
@@ -80,7 +80,7 @@ def candidate_config_paths() -> list[Path]:
         paths.append(macos_app_support_config_path())
     paths.append(home() / ".config" / APP_NAME / "config.toml")
     # Dev-mode (in-repo) fallback
-    in_repo = Path.cwd() / "cmaxctl.toml"
+    in_repo = Path.cwd() / "ccpool.toml"
     paths.append(in_repo)
     # De-dupe while preserving order
     seen: set[str] = set()
@@ -95,9 +95,9 @@ def candidate_config_paths() -> list[Path]:
 
 
 def default_config_path() -> Path:
-    """Where `cmax setup` writes the config on first run.
+    """Where `ccpool setup` writes the config on first run.
 
-    macOS prefers `~/Library/Application Support/cmaxctl/`; Linux uses XDG.
+    macOS prefers `~/Library/Application Support/ccpool/`; Linux uses XDG.
     The override and dev-mode locations are NOT chosen as defaults.
     """
     if _is_macos():

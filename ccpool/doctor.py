@@ -1,4 +1,4 @@
-"""cmaxctl/doctor.py — diagnostic findings + auto-fix.
+"""ccpool/doctor.py — diagnostic findings + auto-fix.
 
 Severity levels: CRITICAL > HIGH > MEDIUM > LOW.
 
@@ -15,7 +15,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from cmaxctl import caam, config, paths, platform, providers, secrets
+from ccpool import caam, config, paths, platform, providers, secrets
 
 BACKUP_DIR = Path.home() / ".claude" / "backups"
 BACKUP_GLOB = ".claude.json.backup.*"
@@ -105,7 +105,7 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
         return findings
 
     # Provider strategy gate — codex/gemini are recognised but not yet implemented
-    # in cmaxctl 1.0. Without this check, `cmax setup` would half-run and confuse.
+    # in ccpool 1.0. Without this check, `ccpool setup` would half-run and confuse.
     pname = (cfg.provider.name or "claude").strip().lower()
     if not providers.is_implemented(pname):
         if pname in providers.SUPPORTED_PROVIDERS:
@@ -113,7 +113,7 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
                 "severity": "HIGH", "code": "provider_not_implemented",
                 "message": (
                     f"provider {pname!r} is recognised by caam but not yet "
-                    "implemented in cmaxctl 1.0"
+                    "implemented in ccpool 1.0"
                 ),
                 "fix": "set [provider] name = \"claude\" in config.toml; tracking issue label:provider",
             })
@@ -132,13 +132,13 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
         findings.append({
             "severity": "HIGH", "code": "no_profiles",
             "message": "no caam profiles configured — system is fully inert",
-            "fix": "cmax setup",
+            "fix": "ccpool setup",
         })
     elif profile_count < 2:
         findings.append({
             "severity": "MEDIUM", "code": "single_profile",
             "message": "only 1 profile — rotation has nothing to alternate to",
-            "fix": "cmax setup (adds the second profile)",
+            "fix": "ccpool setup (adds the second profile)",
         })
 
     healthy = [p for p in profiles if (p.get("health") in ("healthy", "ok"))]
@@ -146,7 +146,7 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
         findings.append({
             "severity": "HIGH", "code": "no_healthy_profiles",
             "message": "all profiles are unhealthy (likely keychain ACL bug after reboot)",
-            "fix": "cmax recover (re-/login each profile)",
+            "fix": "ccpool recover (re-/login each profile)",
         })
 
     warn_d = cfg.storage.token_age_warn_days
@@ -158,7 +158,7 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
             findings.append({
                 "severity": "MEDIUM", "code": f"no_token_{name}",
                 "message": f"profile {name} has no long-lived token stored",
-                "fix": f"cmax rotate {name}",
+                "fix": f"ccpool rotate {name}",
             })
         else:
             age = token_age_days(name)
@@ -166,13 +166,13 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
                 findings.append({
                     "severity": "HIGH", "code": f"token_expired_{name}",
                     "message": f"token for {name} is {age}d old (>= {crit_d}d, likely expired)",
-                    "fix": f"cmax rotate {name}",
+                    "fix": f"ccpool rotate {name}",
                 })
             elif age is not None and age >= warn_d:
                 findings.append({
                     "severity": "LOW", "code": f"token_aging_{name}",
                     "message": f"token for {name} is {age}d old (>= {warn_d}d, rotate soon)",
-                    "fix": f"cmax rotate {name}",
+                    "fix": f"ccpool rotate {name}",
                 })
         # profile_stub: caam dir exists but no creds
         cred = caam.profile_creds_path(name, cfg)
@@ -181,20 +181,20 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
             findings.append({
                 "severity": "MEDIUM", "code": f"profile_stub_{name}",
                 "message": f"profile {name} dir exists but credentials missing",
-                "fix": "cmax setup (will detect and re-provision)",
+                "fix": "ccpool setup (will detect and re-provision)",
             })
 
     if profile_count >= 2 and not platform.schedule_status("watcher", cfg.meta.repo_owner):
         findings.append({
             "severity": "MEDIUM", "code": "watcher_not_loaded",
             "message": "rotate-watcher schedule is not active",
-            "fix": "cmax recover (or `cmax setup` to re-stage)",
+            "fix": "ccpool recover (or `ccpool setup` to re-stage)",
         })
     if not platform.schedule_status("watchdog", cfg.meta.repo_owner):
         findings.append({
             "severity": "LOW", "code": "watchdog_not_loaded",
             "message": "daily watchdog schedule is not active",
-            "fix": "cmax recover (or `cmax setup` to re-stage)",
+            "fix": "ccpool recover (or `ccpool setup` to re-stage)",
         })
 
     backups = count_backups()
@@ -202,7 +202,7 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
         findings.append({
             "severity": "LOW", "code": "backups_pile",
             "message": f"caam wrote {backups} backups — prune",
-            "fix": "cmax recover (prunes >24h)",
+            "fix": "ccpool recover (prunes >24h)",
         })
 
     if paths.degraded_flag_path().exists():
@@ -213,7 +213,7 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
         findings.append({
             "severity": "HIGH", "code": "degraded",
             "message": f"degradation flag set: {reason}",
-            "fix": "cmax doctor --fix; cmax recover",
+            "fix": "ccpool doctor --fix; ccpool recover",
         })
 
     # Schema drift
@@ -222,7 +222,7 @@ def diagnose(cfg: config.Config | None = None) -> list[dict[str, Any]]:
             "severity": "HIGH", "code": "config_schema_version_drift",
             "message": (f"config schema_version={cfg.meta.schema_version}, "
                         f"current={config.CURRENT_SCHEMA_VERSION}"),
-            "fix": "cmax migrate",
+            "fix": "ccpool migrate",
         })
 
     # Linux-only: secret-tool absence is a warning when keychain backend is desired
@@ -252,7 +252,7 @@ def autofix(findings: list[dict[str, Any]],
         # try to load.
         ok, err = platform.schedule_install(
             "watcher",
-            ["python3", "-m", "cmaxctl.watcher"],
+            ["python3", "-m", "ccpool.watcher"],
             every_s=cfg.watcher.interval_s,
             owner=cfg.meta.repo_owner,
         )
@@ -260,7 +260,7 @@ def autofix(findings: list[dict[str, Any]],
     if "watchdog_not_loaded" in codes:
         ok, err = platform.schedule_install(
             "watchdog",
-            ["python3", "-m", "cmaxctl.watchdog"],
+            ["python3", "-m", "ccpool.watchdog"],
             every_s=86400,  # daily
             owner=cfg.meta.repo_owner,
         )

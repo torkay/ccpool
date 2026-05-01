@@ -1,6 +1,6 @@
-"""cmaxctl/identity.py — token validation + per-account identity markers.
+"""ccpool/identity.py — token validation + per-account identity markers.
 
-Used by `cmax setup` to detect "operator signed into the same account twice"
+Used by `ccpool setup` to detect "operator signed into the same account twice"
 (footgun: rotation across two profiles that share an account is no rotation).
 
 Two derived identifiers:
@@ -20,7 +20,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from cmaxctl import caam, config
+from ccpool import caam, config
 
 ENDPOINT = "https://api.anthropic.com/api/oauth/usage"
 BETA_HEADER = "oauth-2025-04-20"
@@ -39,7 +39,7 @@ def validate_oauth_token(token: str) -> dict | None:
         headers={
             "Authorization": f"Bearer {token.strip()}",
             "anthropic-beta": BETA_HEADER,
-            "User-Agent": "cmaxctl/identity",
+            "User-Agent": "ccpool/identity",
             "Accept": "application/json",
         },
     )
@@ -104,7 +104,7 @@ def profile_identity_marker(profile: str,
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("usage: python -m cmaxctl.identity {validate <token> | marker <profile>}",
+        print("usage: python -m ccpool.identity {validate <token> | marker <profile>}",
               file=sys.stderr)
         return 64
     cmd = sys.argv[1]

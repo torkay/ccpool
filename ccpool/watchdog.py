@@ -1,21 +1,21 @@
-"""cmaxctl/watchdog.py — daily health + usage tick.
+"""ccpool/watchdog.py — daily health + usage tick.
 
-Replaces the personal `cmax-watchdog.sh` bash script. Pure Python so Linux
-gets it for free; thin bash shim at `bin/cmax-watchdog` exists only for
+Replaces the personal `ccpool-watchdog.sh` bash script. Pure Python so Linux
+gets it for free; thin bash shim at `bin/ccpool-watchdog` exists only for
 launchd/systemd ProgramArgument simplicity.
 
 Each fire:
   1. Run doctor with auto-fix; capture machine output
   2. Prune stale caam backups
   3. Telegram-escalate doctor HIGH/CRITICAL findings
-  4. Hit `cmax usage --json` and notify on threshold breach
+  4. Hit `ccpool usage --json` and notify on threshold breach
 """
 from __future__ import annotations
 
 import sys
 import time
 
-from cmaxctl import caam, config, doctor, notify, paths, usage
+from ccpool import caam, config, doctor, notify, paths, usage
 
 
 def _log(line: str) -> None:
@@ -63,9 +63,9 @@ def tick(cfg: config.Config | None = None) -> int:
                 if f.get("severity") in ("HIGH", "CRITICAL")]
         notify.fire(
             severity="high",
-            title=f"cmaxctl watchdog: {severity}",
+            title=f"ccpool watchdog: {severity}",
             message="\n".join(msgs)[:600] or f"watchdog detected {severity} findings",
-            type_="cmaxctl-watchdog",
+            type_="ccpool-watchdog",
             cfg=cfg,
         )
 
@@ -99,9 +99,9 @@ def tick(cfg: config.Config | None = None) -> int:
                 _log(f"  {h}")
             notify.fire(
                 severity="high",
-                title="cmaxctl usage: thresholds breached",
+                title="ccpool usage: thresholds breached",
                 message="\n".join(hits)[:600],
-                type_="cmaxctl-usage",
+                type_="ccpool-usage",
                 cfg=cfg,
             )
 

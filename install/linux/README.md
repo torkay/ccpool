@@ -27,8 +27,8 @@ cd install/linux/arch
 makepkg -si
 ```
 
-After first release, AUR submission goes via the `aur.archlinux.org/cmaxctl.git` git remote with the same PKGBUILD plus a `.SRCINFO` (generated via `makepkg --printsrcinfo > .SRCINFO`).
+After first release, AUR submission goes via the `aur.archlinux.org/ccpool.git` git remote with the same PKGBUILD plus a `.SRCINFO` (generated via `makepkg --printsrcinfo > .SRCINFO`).
 
 ## Why both files exist as skeletons
 
-cmaxctl ships first via Homebrew (macOS) + pip/pipx (universal). `.deb` and AUR are documented from day one so distro packagers can pick them up without reverse-engineering, but the maintenance burden of live-shipping them isn't justified at v1.0. Promote to "shipped" lanes when there's user demand or a contributor steps up.
+ccpool ships first via Homebrew (macOS) + pip/pipx (universal). `.deb` and AUR are documented from day one so distro packagers can pick them up without reverse-engineering, but the maintenance burden of live-shipping them isn't justified at v1.0. Promote to "shipped" lanes when there's user demand or a contributor steps up.

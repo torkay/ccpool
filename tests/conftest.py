@@ -1,11 +1,11 @@
-"""Shared pytest fixtures for cmaxctl tests.
+"""Shared pytest fixtures for ccpool tests.
 
 Pinned guarantees:
 
 * Tests NEVER touch the operator's real $HOME — every test sees a temp HOME
   with isolated XDG dirs.
 * The native secret backend is forced OFF unless a test explicitly opts in
-  by clearing CMAXCTL_FORCE_ENV_STORAGE — this prevents tests poking real
+  by clearing CCPOOL_FORCE_ENV_STORAGE — this prevents tests poking real
   Keychain / libsecret entries.
 * Mock `caam` and `claude` binaries from tests/fixtures/bin/ are NOT on PATH
   by default; opt in with the `mock_bins_on_path` fixture.
@@ -34,11 +34,11 @@ def _isolate_home(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(home / ".local" / "share"))
     monkeypatch.setenv("XDG_CACHE_HOME", str(home / ".cache"))
     # Force env-only secret backend so tests never poke a real keyring.
-    monkeypatch.setenv("CMAXCTL_FORCE_ENV_STORAGE", "1")
+    monkeypatch.setenv("CCPOOL_FORCE_ENV_STORAGE", "1")
     # Re-import path-sensitive modules so they pick up the new HOME.
     for mod in [
-        "cmaxctl.paths", "cmaxctl.config", "cmaxctl.secrets",
-        "cmaxctl.shell", "cmaxctl.platform",
+        "ccpool.paths", "ccpool.config", "ccpool.secrets",
+        "ccpool.shell", "ccpool.platform",
     ]:
         sys.modules.pop(mod, None)
     yield
@@ -48,7 +48,7 @@ def _isolate_home(tmp_path, monkeypatch):
 def mock_bins_on_path(monkeypatch):
     """Prepend tests/fixtures/bin/ to PATH so caam/claude resolve to mocks."""
     monkeypatch.setenv("PATH", f"{FIXTURES_BIN}{os.pathsep}{os.environ['PATH']}")
-    monkeypatch.setenv("CMAX_MOCK_CAAM_DIR", os.environ["XDG_DATA_HOME"] + "/caam")
+    monkeypatch.setenv("CCPOOL_MOCK_CAAM_DIR", os.environ["XDG_DATA_HOME"] + "/caam")
     yield FIXTURES_BIN
 
 

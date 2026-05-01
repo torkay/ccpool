@@ -1,15 +1,15 @@
 # Architecture
 
-`cmaxctl` is a thin orchestration layer over [`caam`](https://github.com/Dicklesworthstone/coding_agent_account_manager) and [`claude`](https://docs.claude.com/en/docs/claude-code/setup). It does no inference, holds no daemon, and stores no plaintext token outside the OS keychain (or an opt-in `tokens.env` 0600 fallback).
+`ccpool` is a thin orchestration layer over [`caam`](https://github.com/Dicklesworthstone/coding_agent_account_manager) and [`claude`](https://docs.claude.com/en/docs/claude-code/setup). It does no inference, holds no daemon, and stores no plaintext token outside the OS keychain (or an opt-in `tokens.env` 0600 fallback).
 
 The whole tool is ~3500 lines of stdlib-only Python plus a 600-line bash dispatcher.
 
 ## Module map
 
 ```
-bin/cmax                      # bash dispatcher; thin shell over the python CLI
-cmaxctl/
-├── cli.py                    # entrypoint (cmaxctl.cli:main); subcommand router
+bin/ccpool                      # bash dispatcher; thin shell over the python CLI
+ccpool/
+├── cli.py                    # entrypoint (ccpool.cli:main); subcommand router
 ├── config.py                 # TOML loader/writer + dataclass schema + validation
 ├── paths.py                  # XDG resolution; per-OS path divergence
 ├── caam.py                   # caam binary wrapper (profile_ensure, robot_status, ...)
@@ -36,7 +36,7 @@ Captured in [ADR-0004](ADRs/0004-no-resident-daemon.md). Three reasons:
 
 1. **State persistence is the hard part of any rotation tool, not "what time is it".** A scheduled job (launchd interval / systemd timer) gives us "tick every 5 min" for free. Building a daemon to do the same thing buys nothing and adds a process the operator has to monitor.
 2. **Reboots and crashes free.** A scheduled job gets re-fired by the OS. A daemon needs supervisor wiring or it dies invisibly.
-3. **No memory footprint between ticks.** cmaxctl's working set during a tick is < 30 MB. Between ticks it's zero.
+3. **No memory footprint between ticks.** ccpool's working set during a tick is < 30 MB. Between ticks it's zero.
 
 ## Why stdlib-only
 
@@ -46,12 +46,12 @@ Captured in [ADR-0004](ADRs/0004-no-resident-daemon.md). Three reasons:
 
 State is small. Tokens live in keychain (or `tokens.env`). Last-fetched usage is a 5-second JSON file cache. Watcher events are NDJSON append-only. Aggregate state across all this is a few hundred KB at steady state. Adding SQLite would mean adding a dep, a migration story, and a corruption surface for zero observable improvement.
 
-## Sequence: `cmax setup` (first-run, fresh machine)
+## Sequence: `ccpool setup` (first-run, fresh machine)
 
 ```
-operator                   bin/cmax              cmaxctl.cli           caam              claude
+operator                   bin/ccpool              ccpool.cli           caam              claude
    │                          │                      │                   │                  │
-   │── cmax setup ───────────►│                      │                   │                  │
+   │── ccpool setup ───────────►│                      │                   │                  │
    │                          │── migrate detect ───►│                   │                  │
    │                          │◄────── JSON ─────────│                   │                  │
    │                          │  (no v0 detected)    │                   │                  │
@@ -95,12 +95,12 @@ operator                   bin/cmax              cmaxctl.cli           caam     
    │◄── "All set." ───────────│                      │                   │                  │
 ```
 
-## Sequence: `cmax pick` (subagent spawn)
+## Sequence: `ccpool pick` (subagent spawn)
 
 ```
-caller (e.g. fleet)        cmax pick               cmaxctl.pick           usage cache
+caller (e.g. fleet)        ccpool pick               ccpool.pick           usage cache
        │                        │                        │                     │
-       │── eval "$(cmax pick)" ►│                        │                     │
+       │── eval "$(ccpool pick)" ►│                        │                     │
        │                        │── load config ────────►│                     │
        │                        │◄── 2 profiles ─────────│                     │
        │                        │                        │                     │
@@ -126,11 +126,11 @@ When all profiles are above `picker.hard_threshold_pct`, `pick` emits `SATURATED
 
 ## Why `pick` is the integration contract
 
-[ADR / plan §3 #9](ADRs/) — `cmax pick` is pure env-emission. Any spawner (whether it's `agent fleet`, a custom orchestrator, or just a shell loop) inherits the right env via `eval "$(cmax pick)"`. cmaxctl doesn't link against the spawner; the spawner doesn't link against cmaxctl. The integration is a process boundary, which is the cheapest possible coupling.
+[ADR / plan §3 #9](ADRs/) — `ccpool pick` is pure env-emission. Any spawner (whether it's `agent fleet`, a custom orchestrator, or just a shell loop) inherits the right env via `eval "$(ccpool pick)"`. ccpool doesn't link against the spawner; the spawner doesn't link against ccpool. The integration is a process boundary, which is the cheapest possible coupling.
 
 ## Provider abstraction
 
-caam already supports multiple providers (claude, codex, gemini). At v1, cmaxctl ships **claude full + codex/gemini stubs** that raise `NotImplementedError("provider not implemented in cmaxctl 1.0")`. Each per-provider concern (login flow, token issuance, usage endpoint, identity marker) is a strategy table keyed by `cfg.provider.name`. Future PRs add codex and gemini full parity without touching the orchestration layer.
+caam already supports multiple providers (claude, codex, gemini). At v1, ccpool ships **claude full + codex/gemini stubs** that raise `NotImplementedError("provider not implemented in ccpool 1.0")`. Each per-provider concern (login flow, token issuance, usage endpoint, identity marker) is a strategy table keyed by `cfg.provider.name`. Future PRs add codex and gemini full parity without touching the orchestration layer.
 
 See [PROVIDERS.md](PROVIDERS.md) for the per-provider plan.
 
@@ -143,7 +143,7 @@ Almost every OS-conditional path lives in `platform.py` or `paths.py`:
 | Schedule | `launchctl bootstrap`/`bootout` + plist | `systemctl --user enable` + `.service`/`.timer` (cron fallback) |
 | Keychain | `security` CLI | `secret-tool` CLI (libsecret) |
 | Browser open | `open <url>` | `xdg-open <url>` |
-| Config dir | `~/Library/Application Support/cmaxctl` (preferred) | `$XDG_CONFIG_HOME/cmaxctl` |
+| Config dir | `~/Library/Application Support/ccpool` (preferred) | `$XDG_CONFIG_HOME/ccpool` |
 
 The rest of the codebase is OS-agnostic. Adding Windows would mean adding a `WindowsScheduler` (Task Scheduler), a `WindowsCredentialManager` keychain backend, and a registry-aware paths module. PR-welcome but not v1.
 

@@ -1,16 +1,16 @@
-"""cmaxctl/secrets.py — token storage with graceful fallback.
+"""ccpool/secrets.py — token storage with graceful fallback.
 
 Backends in priority order on read (env wins so a deliberate fallback overrides
 a stale keychain entry); reverse on write (keychain first, fall through to env):
 
     1. macOS Keychain (`security` CLI) — when available
     2. Linux libsecret / GNOME-Keyring (`secret-tool` CLI) — when available
-    3. Plaintext env file at $XDG_DATA_HOME/cmaxctl/tokens.env (mode 0600) — fallback
+    3. Plaintext env file at $XDG_DATA_HOME/ccpool/tokens.env (mode 0600) — fallback
 
-Service prefix: `cmaxctl-token-<profile>`. Migration from the legacy
+Service prefix: `ccpool-token-<profile>`. Migration from the legacy
 `caam-claude-token-<profile>` prefix is handled in `migrate.py`.
 
-Operator-side override: `CMAXCTL_FORCE_ENV_STORAGE=1` (or the legacy
+Operator-side override: `CCPOOL_FORCE_ENV_STORAGE=1` (or the legacy
 `CAAM_FORCE_ENV_STORAGE=1` for compat) forces the env backend.
 
 Stdlib only.
@@ -25,10 +25,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from cmaxctl import paths
+from ccpool import paths
 
 _VALID_PROFILE = re.compile(r"^[a-zA-Z0-9._-]+$")
-_ENV_KEY_PREFIX = "CMAXCTL_TOKEN_"
+_ENV_KEY_PREFIX = "CCPOOL_TOKEN_"
 _LEGACY_ENV_KEY_PREFIX = "CAAM_TOKEN_"
 
 
@@ -40,7 +40,7 @@ def _check_profile(profile: str) -> None:
 
 
 def force_env() -> bool:
-    return (os.environ.get("CMAXCTL_FORCE_ENV_STORAGE") == "1"
+    return (os.environ.get("CCPOOL_FORCE_ENV_STORAGE") == "1"
             or os.environ.get("CAAM_FORCE_ENV_STORAGE") == "1")
 
 
@@ -75,7 +75,7 @@ def _account_user() -> str:
 def _read_env_file() -> dict[str, str]:
     """Returns {profile: token} after stripping the wire prefix.
 
-    Tolerates BOTH the new (`CMAXCTL_TOKEN_`) and legacy (`CAAM_TOKEN_`)
+    Tolerates BOTH the new (`CCPOOL_TOKEN_`) and legacy (`CAAM_TOKEN_`)
     prefixes so an in-place migration doesn't lose data."""
     p = env_file_path()
     if not p.exists():
@@ -109,7 +109,7 @@ def _read_env_file() -> dict[str, str]:
 def _write_env_file(values: dict[str, str]) -> bool:
     _ensure_env_file_mode()
     p = env_file_path()
-    lines = [f"# cmaxctl token store. mode 600. one {_ENV_KEY_PREFIX}<profile>=<value> per line."]
+    lines = [f"# ccpool token store. mode 600. one {_ENV_KEY_PREFIX}<profile>=<value> per line."]
     for k in sorted(values):
         lines.append(f"{_ENV_KEY_PREFIX}{k}={values[k]}")
     try:
@@ -147,7 +147,7 @@ def _macos_keychain_set(profile: str, token: str, account: str | None = None) ->
     cmd = ["security", "add-generic-password", "-U",
            "-s", f"{paths.SERVICE_PREFIX}{profile}",
            "-a", acct,
-           "-j", f"cmaxctl OAuth token for profile {profile}",
+           "-j", f"ccpool OAuth token for profile {profile}",
            "-w", token]
     try:
         # First attempt: explicit -k to defeat the "no keychain to store"
@@ -207,7 +207,7 @@ def _secret_tool_set(profile: str, token: str, account: str | None = None) -> tu
     _check_profile(profile)
     if not token:
         return False, "empty token"
-    label = f"cmaxctl OAuth token for profile {profile}"
+    label = f"ccpool OAuth token for profile {profile}"
     cmd = ["secret-tool", "store", "--label", label,
            "service", paths.APP_NAME,
            "profile", profile]
@@ -332,7 +332,7 @@ def list_tokens() -> dict[str, str]:
     out: dict[str, str] = {}
     if not force_env():
         # Probe known names from env file + caam filesystem
-        from cmaxctl import caam
+        from ccpool import caam
         seen = set(_read_env_file().keys()) | set(caam.filesystem_profiles())
         for p in seen:
             try:
@@ -346,7 +346,7 @@ def list_tokens() -> dict[str, str]:
 
 
 def storage_status() -> dict:
-    """Snapshot for `cmax doctor`."""
+    """Snapshot for `ccpool doctor`."""
     return {
         "env_file": str(env_file_path()),
         "env_file_exists": env_file_path().exists(),
@@ -360,7 +360,7 @@ def storage_status() -> dict:
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("usage: python -m cmaxctl.secrets {get|set|delete|list|status} [args...]",
+        print("usage: python -m ccpool.secrets {get|set|delete|list|status} [args...]",
               file=sys.stderr)
         return 64
     cmd = sys.argv[1]

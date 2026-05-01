@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Indexed by **symptom**. Most fixes are one command. When in doubt, run `cmax doctor --json` first — it surfaces the same finding codes referenced below.
+Indexed by **symptom**. Most fixes are one command. When in doubt, run `ccpool doctor --json` first — it surfaces the same finding codes referenced below.
 
 ---
 
@@ -8,7 +8,7 @@ Indexed by **symptom**. Most fixes are one command. When in doubt, run `cmax doc
 
 ### `caam: command not found` after `go install`
 
-Symptoms: `cmax doctor` reports `caam_missing` (CRITICAL).
+Symptoms: `ccpool doctor` reports `caam_missing` (CRITICAL).
 
 **Fix:** add `~/go/bin` to `$PATH`:
 
@@ -27,7 +27,7 @@ go env GOPATH       # should match the dir caam was installed into
 
 ### `claude: command not found` after Anthropic install
 
-Symptoms: `cmax doctor` reports `claude_missing` (CRITICAL).
+Symptoms: `ccpool doctor` reports `claude_missing` (CRITICAL).
 
 **Fix:** follow the [Anthropic install guide](https://docs.claude.com/en/docs/claude-code/setup). On Apple Silicon, `claude` typically lands in `/opt/homebrew/bin`; on Intel macOS in `/usr/local/bin`; on Linux in `~/.local/bin`. Verify with `which claude`.
 
@@ -37,9 +37,9 @@ If you've installed via npm and `claude` isn't on PATH, run:
 npm config get prefix    # add the resulting bin/ to PATH
 ```
 
-### `pipx install cmaxctl` fails: `ImportError: cannot import name 'tomllib'`
+### `pipx install ccpool` fails: `ImportError: cannot import name 'tomllib'`
 
-Symptoms: `pip` succeeds but `cmax version` errors immediately.
+Symptoms: `pip` succeeds but `ccpool version` errors immediately.
 
 **Cause:** Python < 3.11. `tomllib` was added in 3.11.
 
@@ -48,16 +48,16 @@ Symptoms: `pip` succeeds but `cmax version` errors immediately.
 ```bash
 brew install python@3.12        # macOS
 apt install python3.12          # Ubuntu 24+
-pipx install --python python3.12 cmaxctl
+pipx install --python python3.12 ccpool
 ```
 
-### `brew install cmaxctl` says formula not found
+### `brew install ccpool` says formula not found
 
 **Fix:** tap before install:
 
 ```bash
-brew tap torkay/cmaxctl
-brew install cmaxctl
+brew tap torkay/ccpool
+brew install ccpool
 ```
 
 ### Linux: `secret-tool: command not found`
@@ -77,30 +77,30 @@ sudo dnf install libsecret
 sudo pacman -S libsecret
 ```
 
-If you're on a headless host without D-Bus, cmaxctl falls back to `tokens.env` 0600 and `cmax doctor` will surface a LOW severity warning. That's fine — tokens still work, just plaintext on disk.
+If you're on a headless host without D-Bus, ccpool falls back to `tokens.env` 0600 and `ccpool doctor` will surface a LOW severity warning. That's fine — tokens still work, just plaintext on disk.
 
 ---
 
 ## Setup
 
-### `cmax setup` opens browser, login completes, but cmaxctl says credentials not present
+### `ccpool setup` opens browser, login completes, but ccpool says credentials not present
 
-Symptoms: `cmax setup` fails on the same-account-guard step or token-issuance step. macOS specifically.
+Symptoms: `ccpool setup` fails on the same-account-guard step or token-issuance step. macOS specifically.
 
 **Cause:** Apple Keychain ACL bug [#20553](https://github.com/anthropics/claude-code/issues/20553). Newly-namespaced credentials become unreadable after process exits.
 
 **Fix:**
 
 ```bash
-cmax recover --rebuild-keychain     # wipes + re-adds keychain entries from tokens.env mirror
-cmax setup                          # retry
+ccpool recover --rebuild-keychain     # wipes + re-adds keychain entries from tokens.env mirror
+ccpool setup                          # retry
 ```
 
 If that still fails, force env-only storage:
 
 ```bash
-export CMAXCTL_FORCE_ENV_STORAGE=1
-cmax setup
+export CCPOOL_FORCE_ENV_STORAGE=1
+ccpool setup
 ```
 
 Add the export to `~/.zshrc` to persist.
@@ -111,9 +111,9 @@ Symptoms: `SAME ACCOUNT DETECTED. <profile-a> signed into the same Claude accoun
 
 **Cause:** Both profiles' Claude logins resolved to the same Claude Max account. Rotation has nothing to alternate to.
 
-**Fix:** the offending profile is auto-purged. Re-run `cmax setup` and ensure you sign into a different account when prompted. Tip: use a private/incognito browser window for the second login if your default browser is auto-filling the first account.
+**Fix:** the offending profile is auto-purged. Re-run `ccpool setup` and ensure you sign into a different account when prompted. Tip: use a private/incognito browser window for the second login if your default browser is auto-filling the first account.
 
-### `cmax setup` hangs at "preparing isolated workspace"
+### `ccpool setup` hangs at "preparing isolated workspace"
 
 **Cause:** caam profile-add shelling out and getting blocked.
 
@@ -123,13 +123,13 @@ Symptoms: `SAME ACCOUNT DETECTED. <profile-a> signed into the same Claude accoun
 caam profile add claude debug-test --isolated     # interactive — type ctrl-c to bail
 ```
 
-If caam itself hangs, file an issue upstream at <https://github.com/Dicklesworthstone/coding_agent_account_manager/issues>. cmaxctl can't help past this point.
+If caam itself hangs, file an issue upstream at <https://github.com/Dicklesworthstone/coding_agent_account_manager/issues>. ccpool can't help past this point.
 
 ---
 
 ## Runtime
 
-### `cmax usage` shows blank / "endpoint unreachable"
+### `ccpool usage` shows blank / "endpoint unreachable"
 
 **Cause:** Anthropic's `/api/oauth/usage` endpoint failed. This is undocumented and explicitly fragile ([ADR-0007](ADRs/0007-oauth-usage-undocumented-endpoint.md)).
 
@@ -140,55 +140,55 @@ caam env claude personal | grep CLAUDE_CODE_OAUTH_TOKEN
 # Try a curl with that token to see if it's a network issue or an Anthropic-side change
 ```
 
-If the endpoint returns HTTP 410, cmaxctl auto-flips to `caam_blocks` peer (Plan-B). `cmax doctor` will surface `oauth_endpoint_410` and re-prioritise the picker.
+If the endpoint returns HTTP 410, ccpool auto-flips to `caam_blocks` peer (Plan-B). `ccpool doctor` will surface `oauth_endpoint_410` and re-prioritise the picker.
 
-### `cmax doctor` reports `oauth_endpoint_410`
+### `ccpool doctor` reports `oauth_endpoint_410`
 
 CRITICAL. Auto-fix flips `cfg.picker.strategy_order` to skip `usage_aware`. The watcher and watchdog continue working off block-parser estimates.
 
 ```bash
-cmax doctor --fix
+ccpool doctor --fix
 ```
 
-### Rotation isn't happening — `cmax` keeps using the same account
+### Rotation isn't happening — `ccpool` keeps using the same account
 
 **Diagnose:**
 
 ```bash
-cmax status              # are both profiles healthy?
-cmax doctor              # any HIGH/CRITICAL findings?
-cmax logs -n 50          # recent watcher events
+ccpool status              # are both profiles healthy?
+ccpool doctor              # any HIGH/CRITICAL findings?
+ccpool logs -n 50          # recent watcher events
 ```
 
 Common causes:
 
 | Cause | Fix |
 |---|---|
-| Watcher schedule didn't load | `cmax doctor --fix` re-stages |
+| Watcher schedule didn't load | `ccpool doctor --fix` re-stages |
 | Both accounts under soft threshold (no need to rotate yet) | working as designed; no fix |
-| `cmax disable` flag set | `cmax enable` |
+| `ccpool disable` flag set | `ccpool enable` |
 | `CLAUDE_ROTATE_DISABLE=1` in environment | `unset CLAUDE_ROTATE_DISABLE` |
-| Only 1 profile configured | `cmax setup` to add the second |
+| Only 1 profile configured | `ccpool setup` to add the second |
 
 ### Token age warning / critical
 
 ```bash
-cmax doctor              # shows token_age_warn or token_age_critical
-cmax rotate <profile>    # interactive; opens browser for setup-token
+ccpool doctor              # shows token_age_warn or token_age_critical
+ccpool rotate <profile>    # interactive; opens browser for setup-token
 ```
 
-cmaxctl warns at 330 days (LOW) and goes critical at 360 days. Anthropic's long-lived tokens are nominally non-expiring but rotating annually is good hygiene.
+ccpool warns at 330 days (LOW) and goes critical at 360 days. Anthropic's long-lived tokens are nominally non-expiring but rotating annually is good hygiene.
 
-### `cmax disable` set but cmaxctl still trying to rotate
+### `ccpool disable` set but ccpool still trying to rotate
 
 **Cause:** the on-disk flag wasn't written, or it's in the wrong directory.
 
 **Fix:**
 
 ```bash
-ls -la "${XDG_DATA_HOME:-$HOME/.local/share}/cmaxctl/disabled"
+ls -la "${XDG_DATA_HOME:-$HOME/.local/share}/ccpool/disabled"
 # If missing, force write:
-touch "${XDG_DATA_HOME:-$HOME/.local/share}/cmaxctl/disabled"
+touch "${XDG_DATA_HOME:-$HOME/.local/share}/ccpool/disabled"
 ```
 
 ---
@@ -200,28 +200,28 @@ touch "${XDG_DATA_HOME:-$HOME/.local/share}/cmaxctl/disabled"
 **Diagnose:**
 
 ```bash
-launchctl list | grep cmaxctl
-launchctl print gui/$(id -u)/io.github.<owner>.cmaxctl.watcher
+launchctl list | grep ccpool
+launchctl print gui/$(id -u)/io.github.<owner>.ccpool.watcher
 ```
 
 Look for a non-zero `last exit code`. If the plist isn't loaded:
 
 ```bash
-cmax doctor --fix        # re-stages plists
+ccpool doctor --fix        # re-stages plists
 ```
 
 ### Linux: systemd-user timer not firing
 
 ```bash
-systemctl --user list-timers | grep cmaxctl
-systemctl --user status cmaxctl-watcher.timer
-journalctl --user -u cmaxctl-watcher.service -n 50
+systemctl --user list-timers | grep ccpool
+systemctl --user status ccpool-watcher.timer
+journalctl --user -u ccpool-watcher.service -n 50
 ```
 
-If `systemctl --user` itself fails (no D-Bus session), cmaxctl falls back to crontab automatically. Check:
+If `systemctl --user` itself fails (no D-Bus session), ccpool falls back to crontab automatically. Check:
 
 ```bash
-crontab -l | grep cmaxctl
+crontab -l | grep ccpool
 ```
 
 ### Linux: cron fallback active but jobs not running
@@ -241,17 +241,17 @@ If you can't run a system cron daemon (containers, restricted hosts), see [COMPA
 
 ## Shell integration
 
-### `cmax` not found after install
+### `ccpool` not found after install
 
 **Cause:** install path not on `$PATH`.
 
 **Fix:** find where the binary landed:
 
 ```bash
-which cmax || (
+which ccpool || (
   pipx environment --value PIPX_BIN_DIR
   brew --prefix
-  ls -la ~/.local/bin/cmax
+  ls -la ~/.local/bin/ccpool
 )
 ```
 
@@ -264,45 +264,45 @@ Add the directory to `$PATH` in your rc file.
 **Fix:**
 
 ```bash
-cmax doctor --fix        # detects zshrc_block_drift and re-writes the block
+ccpool doctor --fix        # detects zshrc_block_drift and re-writes the block
 ```
 
-The managed block is wrapped in clear markers (`# >>> cmaxctl >>>` / `# <<< cmaxctl <<<`); cmaxctl never touches anything outside them.
+The managed block is wrapped in clear markers (`# >>> ccpool >>>` / `# <<< ccpool <<<`); ccpool never touches anything outside them.
 
 ### Fish shell: alias not picking up
 
-**Cause:** fish reads `~/.config/fish/conf.d/*.fish` rather than a single rc file. cmaxctl writes to `~/.config/fish/conf.d/cmaxctl.fish`.
+**Cause:** fish reads `~/.config/fish/conf.d/*.fish` rather than a single rc file. ccpool writes to `~/.config/fish/conf.d/ccpool.fish`.
 
 **Fix:**
 
 ```bash
-ls -la ~/.config/fish/conf.d/cmaxctl.fish
+ls -la ~/.config/fish/conf.d/ccpool.fish
 # If missing:
-cmax doctor --fix
+ccpool doctor --fix
 ```
 
 ---
 
 ## Migration (v0 → v1)
 
-### `cmax migrate apply` aborts on "tokens.env conflicts"
+### `ccpool migrate apply` aborts on "tokens.env conflicts"
 
-**Cause:** v1 cmaxctl found an existing `tokens.env` it didn't write.
+**Cause:** v1 ccpool found an existing `tokens.env` it didn't write.
 
 **Fix:** rename or remove the conflicting file:
 
 ```bash
-mv ~/.local/share/cmaxctl/tokens.env ~/.local/share/cmaxctl/tokens.env.preserved
-cmax migrate apply
+mv ~/.local/share/ccpool/tokens.env ~/.local/share/ccpool/tokens.env.preserved
+ccpool migrate apply
 ```
 
 Then merge any tokens you actually need:
 
 ```bash
-cmax rotate    # re-issues fresh tokens for all profiles
+ccpool rotate    # re-issues fresh tokens for all profiles
 ```
 
-### `cmax migrate detect` says "detected: false" on a known-v0 machine
+### `ccpool migrate detect` says "detected: false" on a known-v0 machine
 
 **Cause:** v0 lived in non-standard paths. Detection is signal-based — needs ≥2 of: caam profiles in the v0 personal layout, legacy `~/.zshrc` block, legacy launchd plist, legacy `~/.local/share/caam/tokens.json`.
 
@@ -312,7 +312,7 @@ cmax rotate    # re-issues fresh tokens for all profiles
 
 ## Doctor finding code reference
 
-For the full table, see [REFERENCE.md § doctor](REFERENCE.md#cmax-doctor---fix---json). Quick lookup:
+For the full table, see [REFERENCE.md § doctor](REFERENCE.md#ccpool-doctor---fix---json). Quick lookup:
 
 | Code | This file's section |
 |---|---|
@@ -327,32 +327,32 @@ For the full table, see [REFERENCE.md § doctor](REFERENCE.md#cmax-doctor---fix-
 
 ## Last-resort reset
 
-If cmaxctl is in a confused state and `cmax doctor --fix` isn't enough:
+If ccpool is in a confused state and `ccpool doctor --fix` isn't enough:
 
 ```bash
-cmax disable
-cmax remove-shell
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/io.github.*.cmaxctl.*.plist  # macOS
-systemctl --user disable cmaxctl-watcher.timer cmaxctl-watchdog.timer              # Linux
-rm -rf ~/.config/cmaxctl ~/.local/share/cmaxctl ~/.cache/cmaxctl
+ccpool disable
+ccpool remove-shell
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/io.github.*.ccpool.*.plist  # macOS
+systemctl --user disable ccpool-watcher.timer ccpool-watchdog.timer              # Linux
+rm -rf ~/.config/ccpool ~/.local/share/ccpool ~/.cache/ccpool
 # Tokens in keychain (macOS):
-security delete-generic-password -s cmaxctl-token-personal 2>/dev/null
-security delete-generic-password -s cmaxctl-token-secondary 2>/dev/null
+security delete-generic-password -s ccpool-token-personal 2>/dev/null
+security delete-generic-password -s ccpool-token-secondary 2>/dev/null
 
 # Now reinstall:
-cmax setup
+ccpool setup
 ```
 
-This wipes all local cmaxctl state but leaves caam profiles + Claude credentials alone (so you don't have to re-OAuth).
+This wipes all local ccpool state but leaves caam profiles + Claude credentials alone (so you don't have to re-OAuth).
 
 ## Filing a bug
 
-If nothing here helps, file an issue at <https://github.com/torkay/cmaxctl/issues> with:
+If nothing here helps, file an issue at <https://github.com/torkay/ccpool/issues> with:
 
 ```bash
-cmax version
-cmax doctor --json
-cmax logs -n 100
+ccpool version
+ccpool doctor --json
+ccpool logs -n 100
 uname -srm
 python3 --version
 caam --version

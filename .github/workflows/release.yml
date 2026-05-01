@@ -40,7 +40,7 @@ jobs:
           echo "Releasing ${v}"
       - name: Verify _version.py matches tag
         run: |
-          py_v="$(python -c 'from cmaxctl._version import __version__; print(__version__)')"
+          py_v="$(python -c 'from ccpool._version import __version__; print(__version__)')"
           tag_v="${{ steps.ver.outputs.version }}"
           if [[ "${py_v}" != "${tag_v}" ]]; then
             echo "::error::_version.py says ${py_v} but tag is ${tag_v}" >&2
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment:
       name: pypi
-      url: https://pypi.org/p/cmaxctl
+      url: https://pypi.org/p/ccpool
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -107,7 +107,7 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          name: cmaxctl ${{ needs.build.outputs.version }}
+          name: ccpool ${{ needs.build.outputs.version }}
           body_path: ${{ steps.notes.outputs.notes_file }}
           files: dist/*
           draft: false
@@ -124,4 +124,4 @@ jobs:
         # write access to the homebrew tap. See docs/COMPATIBILITY.md.
         run: |
           echo "Brew formula bump needs to be triggered manually for v${{ needs.build.outputs.version }}"
-          echo "Run: brew bump-formula-pr --version=${{ needs.build.outputs.version }} cmaxctl"
+          echo "Run: brew bump-formula-pr --version=${{ needs.build.outputs.version }} ccpool"

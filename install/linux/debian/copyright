@@ -1,10 +1,10 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: cmaxctl
-Upstream-Contact: cmaxctl contributors <noreply@cmaxctl.dev>
-Source: https://github.com/torkay/cmaxctl
+Upstream-Name: ccpool
+Upstream-Contact: ccpool contributors <noreply@ccpool.dev>
+Source: https://github.com/torkay/ccpool
 
 Files: *
-Copyright: 2026 cmaxctl contributors
+Copyright: 2026 ccpool contributors
 License: MIT
 
 License: MIT

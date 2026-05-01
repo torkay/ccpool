@@ -1,17 +1,17 @@
-"""cmaxctl/statusline.py — one-line JSON for prompt integrations.
+"""ccpool/statusline.py — one-line JSON for prompt integrations.
 
-Designed for Starship `[custom.cmax]`, oh-my-zsh segments, p10k, etc.
+Designed for Starship `[custom.ccpool]`, oh-my-zsh segments, p10k, etc.
 
-`cmax statusline`            # JSON
-`cmax statusline --short`    # short text (active profile + emoji)
-`cmax statusline --no-color` # plain text variant
+`ccpool statusline`            # JSON
+`ccpool statusline --short`    # short text (active profile + emoji)
+`ccpool statusline --no-color` # plain text variant
 """
 from __future__ import annotations
 
 import json
 import sys
 
-from cmaxctl import caam, config, paths, usage
+from ccpool import caam, config, paths, usage
 
 
 def _emoji_for(pct: float | None, saturated: bool, degraded: bool) -> str:

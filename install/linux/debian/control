@@ -1,18 +1,18 @@
-Source: cmaxctl
+Source: ccpool
 Section: utils
 Priority: optional
-Maintainer: cmaxctl contributors <noreply@cmaxctl.dev>
+Maintainer: ccpool contributors <noreply@ccpool.dev>
 Build-Depends: debhelper-compat (= 13),
                dh-python,
                python3-all (>= 3.11),
                python3-setuptools
 Standards-Version: 4.6.2
-Homepage: https://github.com/torkay/cmaxctl
-Vcs-Browser: https://github.com/torkay/cmaxctl
-Vcs-Git: https://github.com/torkay/cmaxctl.git
+Homepage: https://github.com/torkay/ccpool
+Vcs-Browser: https://github.com/torkay/ccpool
+Vcs-Git: https://github.com/torkay/ccpool.git
 Rules-Requires-Root: no
 
-Package: cmaxctl
+Package: ccpool
 Architecture: all
 Depends: ${misc:Depends},
          ${python3:Depends},
@@ -21,7 +21,7 @@ Depends: ${misc:Depends},
 Recommends: caam,
             claude
 Description: Smart Claude Max account rotation
- cmaxctl routes claude invocations across multiple Claude Max accounts so
+ ccpool routes claude invocations across multiple Claude Max accounts so
  you never hit the per-account 5-hour or 7-day cap. It uses Anthropic's
  own /api/oauth/usage endpoint as ground truth and falls back to local
  heuristics when the endpoint is unreachable.

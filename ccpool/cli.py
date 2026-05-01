@@ -1,9 +1,9 @@
-"""cmaxctl/cli.py — Python entrypoint.
+"""ccpool/cli.py — Python entrypoint.
 
-`cmaxctl <subcommand> [args]` — dispatches to module functions.
+`ccpool <subcommand> [args]` — dispatches to module functions.
 
-This is the entrypoint registered in pyproject.toml as `cmaxctl`. The bash
-dispatcher at `bin/cmax` handles the *runtime hot path* (`cmax <claude-args>`)
+This is the entrypoint registered in pyproject.toml as `ccpool`. The bash
+dispatcher at `bin/ccpool` handles the *runtime hot path* (`ccpool <claude-args>`)
 in shell for speed; everything else delegates here.
 
 Subcommands:
@@ -36,7 +36,7 @@ import sys
 from datetime import UTC
 from typing import Any
 
-from cmaxctl import (
+from ccpool import (
     _version,
     caam,
     config,
@@ -62,13 +62,13 @@ def _print_findings(findings: list[dict[str, Any]], machine: bool) -> None:
         }, indent=2))
         return
     if not findings:
-        from cmaxctl.status import GREEN, _c
-        print(_c("✓ no findings — cmaxctl is fully green", GREEN))
+        from ccpool.status import GREEN, _c
+        print(_c("✓ no findings — ccpool is fully green", GREEN))
         return
     by_sev: dict[str, list] = {"CRITICAL": [], "HIGH": [], "MEDIUM": [], "LOW": []}
     for f in findings:
         by_sev.setdefault(f.get("severity", "LOW"), []).append(f)
-    from cmaxctl.status import DIM, GREY, RED, YELLOW, _c
+    from ccpool.status import DIM, GREY, RED, YELLOW, _c
     out: list[str] = []
     for sev in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
         if not by_sev.get(sev):
@@ -107,7 +107,7 @@ def cmd_doctor(args: list[str]) -> int:
         log = doctor.autofix(findings, cfg)
         findings = doctor.diagnose(cfg)
         if not machine:
-            from cmaxctl.status import DIM, _c
+            from ccpool.status import DIM, _c
             for ln in log:
                 print(_c(f"  fix: {ln}", DIM))
             print()
@@ -145,7 +145,7 @@ def cmd_usage(args: list[str]) -> int:
         return 0
 
     # Human render (opus column dropped, dollars formatting)
-    from cmaxctl.status import BOLD, DIM, GREEN, RED, YELLOW, _c
+    from ccpool.status import BOLD, DIM, GREEN, RED, YELLOW, _c
 
     def _fmt_pct(p: float | None) -> str:
         if p is None:
@@ -171,7 +171,7 @@ def cmd_usage(args: list[str]) -> int:
             return f"{d}d{hh}h"
         return f"{h}h{m:02d}m" if h else f"{m}m"
 
-    print(_c("cmaxctl usage (ground truth from /api/oauth/usage)", BOLD))
+    print(_c("ccpool usage (ground truth from /api/oauth/usage)", BOLD))
     print()
     print(_c(f"{'profile':<14} {'5h util':>8} {'5h reset':>10} {'7d util':>8} {'7d reset':>10} {'sonnet':>7}", DIM))
     for key, snap in snapshots.items():
@@ -228,12 +228,12 @@ def _usage_snapshot(u) -> dict:
 
 
 def cmd_inventory(args: list[str]) -> int:
-    """Full state snapshot for setup-time decision making (consumed by bin/cmax)."""
+    """Full state snapshot for setup-time decision making (consumed by bin/ccpool)."""
     cfg = config.load()
     inv: dict = {
         "caam_present": caam.caam_present(cfg),
         "claude_present": shutil.which("claude") is not None,
-        "schedule_kind": __import__("cmaxctl.platform", fromlist=["schedule_kind"]).schedule_kind(),
+        "schedule_kind": __import__("ccpool.platform", fromlist=["schedule_kind"]).schedule_kind(),
         "config_path": str(cfg.source_path) if cfg.source_path else None,
         "profiles": {},
         "tokens": {},
@@ -326,7 +326,7 @@ def cmd_logs(args: list[str]) -> int:
 
 def cmd_migrate(args: list[str]) -> int:
     saved = sys.argv
-    sys.argv = ["cmaxctl-migrate", *args]
+    sys.argv = ["ccpool-migrate", *args]
     try:
         return migrate.main()
     finally:
@@ -351,7 +351,7 @@ def cmd_remove_shell(args: list[str]) -> int:
 
 def cmd_record_token(args: list[str]) -> int:
     if len(args) < 2:
-        print("usage: cmaxctl record-token <profile> <account>", file=sys.stderr)
+        print("usage: ccpool record-token <profile> <account>", file=sys.stderr)
         return 64
     profile, account = args[0], args[1]
     import datetime as _dt
@@ -374,7 +374,7 @@ def cmd_record_token(args: list[str]) -> int:
 
 
 def cmd_version(args: list[str]) -> int:
-    print(f"cmaxctl: {_version.__version__}")
+    print(f"ccpool: {_version.__version__}")
     cb = caam.caam_bin()
     if cb:
         # caam uses `caam version` as a subcommand (not `--version` flag)
@@ -414,7 +414,7 @@ COMMANDS = {
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("usage: cmaxctl <subcommand> [args]", file=sys.stderr)
+        print("usage: ccpool <subcommand> [args]", file=sys.stderr)
         print("subcommands: " + ", ".join(sorted(COMMANDS.keys())), file=sys.stderr)
         return 64
     sub = sys.argv[1]

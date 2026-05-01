@@ -1,4 +1,4 @@
-"""cmaxctl/platform.py — OS detection + scheduler abstraction.
+"""ccpool/platform.py — OS detection + scheduler abstraction.
 
 Exposes:
     is_macos() / is_linux() / is_freebsd()
@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from cmaxctl import paths
+from ccpool import paths
 
 # ────────────────────────── OS detection ──────────────────────────
 
@@ -160,7 +160,7 @@ def _systemd_install(unit_name: str, service_path: Path, timer_path: Path,
     paths.ensure_config_parent(timer_path)
     exec_start = " ".join(_systemd_quote(a) for a in argv)
     service_path.write_text(f"""[Unit]
-Description=cmaxctl {unit_name} tick
+Description=ccpool {unit_name} tick
 After=network-online.target
 
 [Service]
@@ -168,7 +168,7 @@ Type=oneshot
 ExecStart={exec_start}
 """)
     timer_path.write_text(f"""[Unit]
-Description=cmaxctl {unit_name} timer
+Description=ccpool {unit_name} timer
 
 [Timer]
 OnBootSec=60s
@@ -233,7 +233,7 @@ def _cron_install(label: str, argv: list[str], every_s: int) -> tuple[bool, str]
     """
     rc = subprocess.run(["crontab", "-l"], capture_output=True, text=True, timeout=3)
     existing = rc.stdout if rc.returncode == 0 else ""
-    marker = f"# cmaxctl:{label}"
+    marker = f"# ccpool:{label}"
     lines = [ln for ln in existing.splitlines() if marker not in ln]
     cmd = " ".join(_systemd_quote(a) for a in argv)
     if every_s >= 86400:
@@ -253,7 +253,7 @@ def _cron_install(label: str, argv: list[str], every_s: int) -> tuple[bool, str]
 def _cron_remove(label: str) -> tuple[bool, str]:
     rc = subprocess.run(["crontab", "-l"], capture_output=True, text=True, timeout=3)
     existing = rc.stdout if rc.returncode == 0 else ""
-    marker = f"# cmaxctl:{label}"
+    marker = f"# ccpool:{label}"
     lines = [ln for ln in existing.splitlines() if marker not in ln]
     new_crontab = "\n".join(lines) + "\n"
     proc = subprocess.run(["crontab", "-"], input=new_crontab,
@@ -265,7 +265,7 @@ def _cron_loaded(label: str) -> bool:
     rc = subprocess.run(["crontab", "-l"], capture_output=True, text=True, timeout=3)
     if rc.returncode != 0:
         return False
-    return f"# cmaxctl:{label}" in rc.stdout
+    return f"# ccpool:{label}" in rc.stdout
 
 
 # ────────────────────────── public API ──────────────────────────

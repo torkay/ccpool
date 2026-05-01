@@ -1,12 +1,12 @@
-# Contributing to cmaxctl
+# Contributing to ccpool
 
 PRs and issues welcome. This file covers the dev loop, style expectations, and how to ship a release.
 
 ## Dev setup
 
 ```bash
-git clone https://github.com/torkay/cmaxctl
-cd cmaxctl
+git clone https://github.com/torkay/ccpool
+cd ccpool
 python -m venv .venv && source .venv/bin/activate
 pip install -e .[dev]
 ```
@@ -28,7 +28,7 @@ The integration tests use mocked `caam` and `claude` binaries (`tests/fixtures/b
 ```bash
 pytest tests/unit tests/integration -v        # unit + integration
 bats tests/integration tests/e2e              # bash-side integration + e2e
-ruff check cmaxctl tests                      # lint
+ruff check ccpool tests                      # lint
 ```
 
 The full test matrix runs on push (see `.github/workflows/{linux,macos}.yml`). Locally, the macOS path is what most contributors will hit; for Linux validation:
@@ -40,10 +40,10 @@ The full test matrix runs on push (see `.github/workflows/{linux,macos}.yml`). L
 ## Style
 
 - **Python**: stdlib-only (no `requests`, `pydantic`, etc.). Single-file modules where possible. `ruff check --fix` is your friend.
-- **Bash**: stay POSIX-compatible enough that `bash 3.2` (macOS default) works. Avoid bashisms in `bin/cmax`.
+- **Bash**: stay POSIX-compatible enough that `bash 3.2` (macOS default) works. Avoid bashisms in `bin/ccpool`.
 - **Identity scrub**: NEVER commit a personal identifier (your username, email, etc.). The CI `identity-scrub` job hard-fails on a hit; if you tripped it, see the error message for the specific file:line.
 - **Comments**: write them only when the WHY is non-obvious. The CI doesn't enforce this but reviewers will trim them.
-- **Tests**: every new finding code in `doctor.py` needs a unit test. Every new subcommand in `bin/cmax` needs a bats case.
+- **Tests**: every new finding code in `doctor.py` needs a unit test. Every new subcommand in `bin/ccpool` needs a bats case.
 - **No SQLite, no resident daemon, no node tooling.** These are deliberate (see ADRs).
 
 ## Adding a feature
@@ -56,12 +56,12 @@ The full test matrix runs on push (see `.github/workflows/{linux,macos}.yml`). L
    ```bash
    pytest tests/unit tests/integration -q
    bats tests/integration tests/e2e
-   ruff check cmaxctl tests
+   ruff check ccpool tests
    ```
 
 ## Adding a doctor finding
 
-1. Add the finding to `cmaxctl/doctor.py` with a stable code (`snake_case`).
+1. Add the finding to `ccpool/doctor.py` with a stable code (`snake_case`).
 2. Document it in `docs/REFERENCE.md` (severity + auto-fix table) and `docs/TROUBLESHOOTING.md` (symptom-indexed entry).
 3. Add a unit test in `tests/unit/test_doctor.py`.
 4. If there's an auto-fix, the test must verify idempotency (running fix twice produces the same state).
@@ -75,7 +75,7 @@ See [docs/PROVIDERS.md § Adding a new provider](docs/PROVIDERS.md#adding-a-new-
 Releases are gated on three lanes being green: macOS CI, Linux CI, identity-scrub.
 
 1. **Update CHANGELOG.md.** Move `[Unreleased]` items into a new `[X.Y.Z]` section with the date.
-2. **Bump `cmaxctl/_version.py`.** The release workflow verifies the tag matches the file.
+2. **Bump `ccpool/_version.py`.** The release workflow verifies the tag matches the file.
 3. **Commit + tag.** Use signed tags via OIDC; never commit a GPG key.
    ```bash
    git commit -am "Release X.Y.Z"
@@ -83,7 +83,7 @@ Releases are gated on three lanes being green: macOS CI, Linux CI, identity-scru
    git push origin main vX.Y.Z
    ```
 4. **CI takes over.** `release.yml` builds sdist + wheel, publishes to PyPI via OIDC trusted publishing, creates the GitHub release with auto-changelog, and triggers the Homebrew formula bump.
-5. **Verify on a clean VM.** `pip install cmaxctl --user; cmax doctor` should be green on a fresh macOS + a fresh Ubuntu.
+5. **Verify on a clean VM.** `pip install ccpool --user; ccpool doctor` should be green on a fresh macOS + a fresh Ubuntu.
 
 Semver:
 

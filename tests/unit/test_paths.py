@@ -1,4 +1,4 @@
-"""Unit tests for cmaxctl.paths — XDG resolution + label computation."""
+"""Unit tests for ccpool.paths — XDG resolution + label computation."""
 from __future__ import annotations
 
 import sys
@@ -7,8 +7,8 @@ from pathlib import Path
 
 def _reload_paths():
     """Re-import after env changes so module-level `home()` calls see new HOME."""
-    sys.modules.pop("cmaxctl.paths", None)
-    from cmaxctl import paths
+    sys.modules.pop("ccpool.paths", None)
+    from ccpool import paths
     return paths
 
 
@@ -16,19 +16,19 @@ def test_xdg_config_path_honours_xdg_config_home(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
     paths = _reload_paths()
     p = paths.xdg_config_path()
-    assert p == tmp_path / "cfg" / "cmaxctl" / "config.toml"
+    assert p == tmp_path / "cfg" / "ccpool" / "config.toml"
 
 
 def test_state_dir_honours_xdg_data_home(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
     paths = _reload_paths()
-    assert paths.state_dir() == tmp_path / "data" / "cmaxctl"
+    assert paths.state_dir() == tmp_path / "data" / "ccpool"
 
 
 def test_cache_dir_honours_xdg_cache_home(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
     paths = _reload_paths()
-    assert paths.cache_dir() == tmp_path / "cache" / "cmaxctl"
+    assert paths.cache_dir() == tmp_path / "cache" / "ccpool"
 
 
 def test_default_config_path_diverges_per_os(monkeypatch, tmp_path):
@@ -36,14 +36,14 @@ def test_default_config_path_diverges_per_os(monkeypatch, tmp_path):
     paths = _reload_paths()
     p = paths.default_config_path()
     if sys.platform == "darwin":
-        assert "Library/Application Support/cmaxctl" in str(p)
+        assert "Library/Application Support/ccpool" in str(p)
     else:
-        assert p == tmp_path / "cfg" / "cmaxctl" / "config.toml"
+        assert p == tmp_path / "cfg" / "ccpool" / "config.toml"
 
 
 def test_explicit_config_override_takes_priority(monkeypatch, tmp_path):
     explicit = tmp_path / "weird" / "cfg.toml"
-    monkeypatch.setenv("CMAXCTL_CONFIG", str(explicit))
+    monkeypatch.setenv("CCPOOL_CONFIG", str(explicit))
     paths = _reload_paths()
     candidates = paths.candidate_config_paths()
     assert candidates[0] == explicit
@@ -51,22 +51,22 @@ def test_explicit_config_override_takes_priority(monkeypatch, tmp_path):
 
 def test_schedule_label_default_owner(monkeypatch):
     paths = _reload_paths()
-    assert paths.schedule_label(None, "watcher") == "io.github.local.cmaxctl.watcher"
-    assert paths.schedule_label("", "watchdog") == "io.github.local.cmaxctl.watchdog"
+    assert paths.schedule_label(None, "watcher") == "io.github.local.ccpool.watcher"
+    assert paths.schedule_label("", "watchdog") == "io.github.local.ccpool.watchdog"
 
 
 def test_schedule_label_custom_owner_normalised(monkeypatch):
     paths = _reload_paths()
     # Mixed case + whitespace gets normalised to lowercase.
-    assert paths.schedule_label("  TorKay  ", "watcher") == "io.github.torkay.cmaxctl.watcher"
+    assert paths.schedule_label("  TorKay  ", "watcher") == "io.github.torkay.ccpool.watcher"
 
 
 def test_systemd_paths_under_xdg_config(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
     paths = _reload_paths()
     assert paths.systemd_user_unit_dir() == tmp_path / "cfg" / "systemd" / "user"
-    assert paths.systemd_service_path("watcher").name == "cmaxctl-watcher.service"
-    assert paths.systemd_timer_path("watchdog").name == "cmaxctl-watchdog.timer"
+    assert paths.systemd_service_path("watcher").name == "ccpool-watcher.service"
+    assert paths.systemd_timer_path("watchdog").name == "ccpool-watchdog.timer"
 
 
 def test_caam_profile_dir_layout(monkeypatch, tmp_path):
@@ -91,7 +91,7 @@ def test_no_personal_identifiers_in_module():
     The forbidden tokens are constructed at runtime so this file itself does
     not match the global identity-scrub gate (which greps the source tree).
     """
-    paths_text = (Path(__file__).resolve().parents[2] / "cmaxctl" / "paths.py").read_text()
+    paths_text = (Path(__file__).resolve().parents[2] / "ccpool" / "paths.py").read_text()
     # Built piece-wise — keeps this file clean of the literals it scans for.
     forbidden = [
         "tor" + "rinkay",

@@ -1,7 +1,7 @@
-"""cmaxctl/config.py — TOML config loader, writer, validator.
+"""ccpool/config.py — TOML config loader, writer, validator.
 
 Schema documented in `docs/REFERENCE.md` and the canonical example template
-shipped at `cmaxctl/templates/config.toml.example`.
+shipped at `ccpool/templates/config.toml.example`.
 
 Stdlib only: tomllib (read; 3.11+), hand-rolled TOML writing (no `tomli_w` dep).
 """
@@ -13,7 +13,7 @@ import tomllib
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from cmaxctl import paths
+from ccpool import paths
 
 CURRENT_SCHEMA_VERSION = 1
 PROFILE_NAME_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
@@ -136,7 +136,7 @@ def validate_config(cfg: Config) -> list[ValidationFinding]:
     if cfg.meta.schema_version != CURRENT_SCHEMA_VERSION:
         findings.append(ValidationFinding(
             "error", "meta.schema_version",
-            f"schema_version {cfg.meta.schema_version} != current {CURRENT_SCHEMA_VERSION}; run `cmax migrate`",
+            f"schema_version {cfg.meta.schema_version} != current {CURRENT_SCHEMA_VERSION}; run `ccpool migrate`",
         ))
 
     if not cfg.profiles:
@@ -327,8 +327,8 @@ def _toml_array_strings(items: list[str]) -> str:
 def render_toml(cfg: Config) -> str:
     """Render Config back to TOML text. Hand-rolled — stdlib has no writer."""
     out: list[str] = []
-    out.append("# cmaxctl configuration. Generated; safe to hand-edit.")
-    out.append("# Run `cmax doctor` to validate after changes.")
+    out.append("# ccpool configuration. Generated; safe to hand-edit.")
+    out.append("# Run `ccpool doctor` to validate after changes.")
     out.append("")
 
     out.append("[meta]")
@@ -421,7 +421,7 @@ def write(cfg: Config, path: Path | None = None) -> Path:
 
 
 def to_dict(cfg: Config) -> dict:
-    """For JSON output (e.g. `cmax inventory --config`)."""
+    """For JSON output (e.g. `ccpool inventory --config`)."""
     d = asdict(cfg)
     d.pop("source_path", None)
     return d

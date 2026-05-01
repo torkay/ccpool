@@ -1,4 +1,4 @@
-"""cmaxctl/pick.py — three-tier profile picker.
+"""ccpool/pick.py — three-tier profile picker.
 
 Tier 1: usage-aware via /api/oauth/usage (ground truth).
 Tier 2: caam smart (cooldown + history heuristic).
@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import sys
 
-from cmaxctl import caam, config, paths, secrets, usage
+from ccpool import caam, config, paths, secrets, usage
 
 SATURATED_SENTINEL = "__saturated__"
 
@@ -160,7 +160,7 @@ def pick_env(cfg: config.Config | None = None) -> dict[str, str] | None:
     if not env:
         _set_degraded(f"caam env failed for {chosen}")
         return None
-    env.setdefault("CMAXCTL_PROFILE", chosen)
+    env.setdefault("CCPOOL_PROFILE", chosen)
     # Compat alias for orchestrators that read the legacy var
     env.setdefault("AGENT_FLEET_CAAM_PROFILE", chosen)
     return env
@@ -191,8 +191,8 @@ def pick_env_with_token(cfg: config.Config | None = None) -> dict[str, str] | No
         _set_degraded(f"no token for {chosen} — falling back to profile-only")
         return None
     env["CLAUDE_CODE_OAUTH_TOKEN"] = token
-    env.setdefault("CMAXCTL_PROFILE", chosen)
-    env.setdefault("CMAXCTL_TOKEN_MODE", "1")
+    env.setdefault("CCPOOL_PROFILE", chosen)
+    env.setdefault("CCPOOL_TOKEN_MODE", "1")
     env.setdefault("AGENT_FLEET_CAAM_PROFILE", chosen)
     env.setdefault("AGENT_FLEET_CAAM_TOKEN_MODE", "1")
     return env

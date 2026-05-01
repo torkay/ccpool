@@ -1,9 +1,9 @@
-"""Unit tests for cmaxctl.providers — strategy table + stub error shape."""
+"""Unit tests for ccpool.providers — strategy table + stub error shape."""
 from __future__ import annotations
 
 import pytest
 
-from cmaxctl import providers
+from ccpool import providers
 
 
 def test_claude_strategy_complete():

@@ -1,14 +1,14 @@
-"""Unit tests for cmaxctl.migrate.detect_v0 — fresh container reports no v0."""
+"""Unit tests for ccpool.migrate.detect_v0 — fresh container reports no v0."""
 from __future__ import annotations
 
 import sys
 
 
 def _fresh():
-    for mod in ("cmaxctl.paths", "cmaxctl.config", "cmaxctl.caam",
-                "cmaxctl.secrets", "cmaxctl.shell", "cmaxctl.migrate"):
+    for mod in ("ccpool.paths", "ccpool.config", "ccpool.caam",
+                "ccpool.secrets", "ccpool.shell", "ccpool.migrate"):
         sys.modules.pop(mod, None)
-    from cmaxctl import migrate
+    from ccpool import migrate
     return migrate
 
 
@@ -31,6 +31,9 @@ def test_detect_v0_picks_up_legacy_zshrc_block(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
     monkeypatch.setenv("HOME", str(home))
+    # NB: this is the v0 (personal-substrate) marker that migrate.py detects.
+    # The literal must stay as `cmax` because that's what existed in the wild
+    # before ccpool. The renamer must not rewrite this.
     (home / ".zshrc").write_text(
         "# user line\n"
         "# >>> cmax (Claude Max rotation)\n"

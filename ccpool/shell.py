@@ -1,16 +1,16 @@
-"""cmaxctl/shell.py — managed shell-rc block writer.
+"""ccpool/shell.py — managed shell-rc block writer.
 
 Writes (or removes) a marked block to ~/.zshrc / ~/.bashrc / fish conf.d.
 Only writes the block to files that already exist (we don't create them).
 Always preserves user content outside the markers.
 
 Markers:
-    # >>> cmaxctl managed block — do not edit by hand
+    # >>> ccpool managed block — do not edit by hand
     ...
-    # <<< cmaxctl
+    # <<< ccpool
 
 The block contents depend on cfg.shell:
-  alias_claude  → `alias claude='cmax'`
+  alias_claude  → `alias claude='ccpool'`
   export_flags  → exports for AGENT_FLEET_USE_CAAM*, CLAUDE_ROTATE_USE_TOKEN, etc.
 """
 from __future__ import annotations
@@ -18,21 +18,21 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from cmaxctl import config, paths
+from ccpool import config, paths
 
-BEGIN_MARKER = "# >>> cmaxctl managed block — do not edit by hand"
-END_MARKER = "# <<< cmaxctl"
-LEGACY_BEGIN_MARKERS = ["# >>> cmax (Claude Max rotation) — managed block, do not edit by hand"]
-LEGACY_END_MARKERS = ["# <<< cmax"]
+BEGIN_MARKER = "# >>> ccpool managed block — do not edit by hand"
+END_MARKER = "# <<< ccpool"
+LEGACY_BEGIN_MARKERS = ["# >>> ccpool (Claude Max rotation) — managed block, do not edit by hand"]
+LEGACY_END_MARKERS = ["# <<< ccpool"]
 
 
 def _block_text(cfg: config.Config) -> str:
     lines = [BEGIN_MARKER]
     if cfg.shell.alias_claude:
-        lines.append("alias claude='cmax'")
+        lines.append("alias claude='ccpool'")
     if cfg.shell.export_flags:
         lines.extend([
-            "export CMAXCTL_USE_TOKEN=1",
+            "export CCPOOL_USE_TOKEN=1",
             "export AGENT_FLEET_USE_CAAM=1",
             "export AGENT_FLEET_USE_CAAM_TOKEN=1",
             "export CLAUDE_ROTATE_USE_TOKEN=1",
@@ -89,7 +89,7 @@ def install(cfg: config.Config | None = None) -> list[tuple[Path, str]]:
             # Fish conf.d files: we DO create the dir + file (it's standalone)
             try:
                 path.parent.mkdir(parents=True, exist_ok=True)
-                fish_block = block.replace("alias claude='cmax'", "alias claude 'cmax'")
+                fish_block = block.replace("alias claude='ccpool'", "alias claude 'ccpool'")
                 fish_block = fish_block.replace("export ", "set -gx ")
                 fish_block = fish_block.replace(" =1", " 1")
                 path.write_text(fish_block)
@@ -183,7 +183,7 @@ def _has_legacy_block(text: str) -> bool:
 
 
 def _strip_legacy_blocks(text: str) -> str:
-    """Remove old `cmax (Claude Max rotation)` blocks from v0 setups."""
+    """Remove old `ccpool (Claude Max rotation)` blocks from v0 setups."""
     for begin in LEGACY_BEGIN_MARKERS:
         if begin not in text:
             continue

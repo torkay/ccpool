@@ -1,6 +1,6 @@
-"""cmaxctl/caam.py — caam binary wrapper.
+"""ccpool/caam.py — caam binary wrapper.
 
-Single contract surface for every caam CLI call cmaxctl makes. ADR-0006
+Single contract surface for every caam CLI call ccpool makes. ADR-0006
 documents the pinned shape; this module is the only place it's encoded.
 
 All functions tolerate caam being absent (return None / [] / False rather
@@ -15,7 +15,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from cmaxctl import config, paths
+from ccpool import config, paths
 
 _EXPORT_RE = re.compile(r'^\s*export\s+([A-Z_][A-Z0-9_]*)=(.*)$')
 
@@ -151,7 +151,7 @@ def profile_ensure(profile: str, description: str = "",
     if profile_dir(profile, cfg).is_dir():
         return True, ""
     provider = (cfg.provider.name if cfg else "claude")
-    desc = description or f"cmaxctl-managed {provider} profile ({profile})"
+    desc = description or f"ccpool-managed {provider} profile ({profile})"
     rc, out, err = _run(cfg, ["profile", "add", provider, profile, "-d", desc], timeout=15.0)
     if rc == 0 or profile_dir(profile, cfg).is_dir():
         return True, ""

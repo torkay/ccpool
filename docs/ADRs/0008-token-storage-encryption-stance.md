@@ -15,15 +15,15 @@ Long-lived OAuth tokens have ~1-year validity (Anthropic side; our age tracker w
 | Option | Pro | Con |
 |---|---|---|
 | App-layer encryption with operator-supplied passphrase | encrypted at rest even without keychain | UX prompt on every read; hard to script; lockout-on-forgotten-passphrase |
-| App-layer encryption with hardcoded key from `~/.config/cmaxctl/secret.key` | no UX prompt | the key file is plaintext; breaks the threat model premise |
+| App-layer encryption with hardcoded key from `~/.config/ccpool/secret.key` | no UX prompt | the key file is plaintext; breaks the threat model premise |
 | Use OS keychain or fall through to plaintext | matches threat model; simple | plaintext file IS plaintext |
 
-The plaintext file lives in `$XDG_DATA_HOME/cmaxctl/tokens.env` mode 0600 — only the owning user can read it. This is the same trust model as:
+The plaintext file lives in `$XDG_DATA_HOME/ccpool/tokens.env` mode 0600 — only the owning user can read it. This is the same trust model as:
 - `~/.zshrc` / `~/.bashrc` (often contain API keys via `export FOO=...`)
 - `~/.aws/credentials`, `~/.config/gh/hosts.yml`
 - `~/.ssh/id_*` private keys (passphrase-optional)
 
-The threat model (`docs/THREAT_MODEL.md`) explicitly excludes "compromised operator machine" — a root attacker reading these files is OOS for cmaxctl.
+The threat model (`docs/THREAT_MODEL.md`) explicitly excludes "compromised operator machine" — a root attacker reading these files is OOS for ccpool.
 
 ## When this changes
 
@@ -33,5 +33,5 @@ The threat model (`docs/THREAT_MODEL.md`) explicitly excludes "compromised opera
 ## Consequences
 
 - Encrypted-volume operators (FileVault, LUKS) get encryption for free at the FS layer.
-- Operators on shared machines should not use cmaxctl (documented as OOS in SECURITY.md).
-- `cmax doctor` warns when state-dir is inside a git repository (T2 risk: accidental commit).
+- Operators on shared machines should not use ccpool (documented as OOS in SECURITY.md).
+- `ccpool doctor` warns when state-dir is inside a git repository (T2 risk: accidental commit).

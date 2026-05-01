@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# `cmax status` renders profile names + token state from a seeded config.
+# `ccpool status` renders profile names + token state from a seeded config.
 #
 # Status reaches into config.toml, the caam profiles dir, and the secrets
 # backend. With env-only secrets and pre-seeded caam profiles, it should
@@ -8,26 +8,26 @@
 load 'test_helper'
 
 setup() {
-  cmax_setup_env
-  cmax_seed_config myowner
-  cmax_seed_caam_profile alpha
-  cmax_seed_caam_profile beta
-  cmax_seed_token alpha
-  cmax_seed_token beta
+  ccpool_setup_env
+  ccpool_seed_config myowner
+  ccpool_seed_caam_profile alpha
+  ccpool_seed_caam_profile beta
+  ccpool_seed_token alpha
+  ccpool_seed_token beta
 }
 
 teardown() {
-  cmax_teardown_env
+  ccpool_teardown_env
 }
 
-@test "cmax status mentions both profile names" {
-  run "${CMAX}" status
+@test "ccpool status mentions both profile names" {
+  run "${CCPOOL}" status
   [[ "${output}" == *"alpha"* ]]
   [[ "${output}" == *"beta"* ]]
 }
 
-@test "cmax status --json emits structured JSON with profile data" {
-  run "${CMAX}" status --json
+@test "ccpool status --json emits structured JSON with profile data" {
+  run "${CCPOOL}" status --json
   python3 -c "
 import json
 d = json.loads('''${output}''')
@@ -39,9 +39,9 @@ assert hit, f'no profiles key found: {list(d.keys())}'
 }
 
 @test "python cli inventory reflects seeded credentials" {
-  # `inventory` is a python-CLI-only command (called by bin/cmax setup
+  # `inventory` is a python-CLI-only command (called by bin/ccpool setup
   # internally, not exposed as a top-level subcommand). Test direct.
-  run python3 -m cmaxctl.cli inventory
+  run python3 -m ccpool.cli inventory
   [ "${status}" -eq 0 ]
   python3 -c "
 import json
@@ -52,8 +52,8 @@ assert profiles['alpha'].get('credentials_present') is True, 'alpha creds not de
 "
 }
 
-@test "cmax statusline reads profile from config" {
-  run "${CMAX}" statusline
+@test "ccpool statusline reads profile from config" {
+  run "${CCPOOL}" statusline
   [ "${status}" -eq 0 ]
   python3 -c "
 import json
@@ -65,8 +65,8 @@ assert isinstance(d.get('saturated'), bool)
 "
 }
 
-@test "cmax usage --json runs against mocked caam (no live network)" {
-  run "${CMAX}" usage --json
+@test "ccpool usage --json runs against mocked caam (no live network)" {
+  run "${CCPOOL}" usage --json
   # Usage reaches Anthropic /api/oauth/usage; without a server it'll degrade.
   # We only assert clean JSON output (no traceback).
   python3 -c "

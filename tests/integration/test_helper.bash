@@ -1,55 +1,55 @@
-# Shared bats helpers for cmaxctl integration tests.
+# Shared bats helpers for ccpool integration tests.
 #
 # Provides:
-#   * REPO_DIR / CMAX / FIXTURES_BIN — common path constants
-#   * cmax_setup_env — isolates HOME + XDG, prepends mock binaries to PATH,
+#   * REPO_DIR / CCPOOL / FIXTURES_BIN — common path constants
+#   * ccpool_setup_env — isolates HOME + XDG, prepends mock binaries to PATH,
 #     forces env-only secret backend
-#   * cmax_seed_config — drops a minimal valid config.toml in $XDG_CONFIG_HOME
-#   * cmax_seed_caam_profile — pre-seeds a caam profile dir with .credentials.json
+#   * ccpool_seed_config — drops a minimal valid config.toml in $XDG_CONFIG_HOME
+#   * ccpool_seed_caam_profile — pre-seeds a caam profile dir with .credentials.json
 #
 # These run inside bats' `setup()` so each test gets a fresh tmp tree.
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CMAX="${REPO_DIR}/bin/cmax"
+CCPOOL="${REPO_DIR}/bin/ccpool"
 FIXTURES_BIN="${REPO_DIR}/tests/fixtures/bin"
 
-cmax_setup_env() {
-  TEST_HOME="$(mktemp -d -t cmax-bats.XXXXXX)"
+ccpool_setup_env() {
+  TEST_HOME="$(mktemp -d -t ccpool-bats.XXXXXX)"
   export HOME="${TEST_HOME}"
   export USER="${USER:-tester}"
   export XDG_CONFIG_HOME="${TEST_HOME}/.config"
   export XDG_DATA_HOME="${TEST_HOME}/.local/share"
   export XDG_CACHE_HOME="${TEST_HOME}/.cache"
-  mkdir -p "${XDG_CONFIG_HOME}/cmaxctl" \
-           "${XDG_DATA_HOME}/cmaxctl" \
+  mkdir -p "${XDG_CONFIG_HOME}/ccpool" \
+           "${XDG_DATA_HOME}/ccpool" \
            "${XDG_DATA_HOME}/caam" \
-           "${XDG_CACHE_HOME}/cmaxctl"
+           "${XDG_CACHE_HOME}/ccpool"
 
   # Force env-only secret backend so tests never touch the real keychain.
-  export CMAXCTL_FORCE_ENV_STORAGE=1
+  export CCPOOL_FORCE_ENV_STORAGE=1
   export CAAM_FORCE_ENV_STORAGE=1
 
   # Mocks first on PATH; keep system tools (python3, awk, grep, …) reachable.
   export PATH="${FIXTURES_BIN}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin"
 
-  # Force `python3` to the host interpreter so `cli()` finds cmaxctl.
-  export CMAX_PY="$(command -v python3 || echo /usr/bin/python3)"
+  # Force `python3` to the host interpreter so `cli()` finds ccpool.
+  export CCPOOL_PY="$(command -v python3 || echo /usr/bin/python3)"
   export PYTHONPATH="${REPO_DIR}:${PYTHONPATH:-}"
 
   # Mock-binary defaults — individual tests can override.
-  export CMAX_MOCK_CAAM_PROFILES="alpha,beta"
-  export CMAX_MOCK_CAAM_DIR="${XDG_DATA_HOME}/caam"
+  export CCPOOL_MOCK_CAAM_PROFILES="alpha,beta"
+  export CCPOOL_MOCK_CAAM_DIR="${XDG_DATA_HOME}/caam"
 }
 
-cmax_teardown_env() {
+ccpool_teardown_env() {
   if [[ -n "${TEST_HOME:-}" && -d "${TEST_HOME}" && "${TEST_HOME}" == /tmp/* ]]; then
     rm -rf "${TEST_HOME}"
   fi
 }
 
-cmax_seed_config() {
+ccpool_seed_config() {
   local owner="${1:-test}"
-  cat > "${XDG_CONFIG_HOME}/cmaxctl/config.toml" <<EOF
+  cat > "${XDG_CONFIG_HOME}/ccpool/config.toml" <<EOF
 [meta]
 schema_version = 1
 repo_owner = "${owner}"
@@ -106,9 +106,9 @@ enabled = false
 EOF
 }
 
-cmax_seed_caam_profile() {
+ccpool_seed_caam_profile() {
   # Match production caam layout: per-profile xdg_config/claude-code wrapper.
-  # See cmaxctl.paths.caam_profile_creds_path.
+  # See ccpool.paths.caam_profile_creds_path.
   local profile="$1"
   local d="${XDG_DATA_HOME}/caam/profiles/claude/${profile}/xdg_config/claude-code"
   mkdir -p "${d}"
@@ -117,9 +117,9 @@ cmax_seed_caam_profile() {
 EOF
 }
 
-cmax_seed_token() {
+ccpool_seed_token() {
   local profile="$1" tok="${2:-sk-ant-oat01-mock}"
-  local env_file="${XDG_DATA_HOME}/cmaxctl/tokens.env"
-  printf 'CMAXCTL_TOKEN_%s=%s\n' "${profile}" "${tok}" >> "${env_file}"
+  local env_file="${XDG_DATA_HOME}/ccpool/tokens.env"
+  printf 'CCPOOL_TOKEN_%s=%s\n' "${profile}" "${tok}" >> "${env_file}"
   chmod 600 "${env_file}"
 }

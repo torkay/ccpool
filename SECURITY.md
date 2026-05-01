@@ -2,7 +2,7 @@
 
 ## Disclosure
 
-If you discover a security issue in `cmaxctl`, please **do not** open a public issue.
+If you discover a security issue in `ccpool`, please **do not** open a public issue.
 
 Email: **security@<TBD>** (placeholder until v1.0; until then, open a GitHub issue marked `[security]` and we'll move it private)
 
